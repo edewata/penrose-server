@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE connections PUBLIC
+  "-//Penrose/DTD Connections ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/connections.dtd">
+
+<connections>
+
+  <connection name="IPA">
+    <adapter-name>LDAP</adapter-name>
+    <parameter>
+      <param-name>java.naming.provider.url</param-name>
+      <param-value>ldap://ipa.example.com/</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.security.principal</param-name>
+      <param-value>cn=Directory Manager</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.security.credentials</param-name>
+      <param-value>Secret123</param-value>
+    </parameter>
+  </connection>
+
+  <connection name="Samba">
+    <adapter-name>LDAP</adapter-name>
+    <parameter>
+      <param-name>java.naming.provider.url</param-name>
+      <param-value>ldap://samba.example.com/</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.security.principal</param-name>
+      <param-value>CN=Administrator,CN=Users,DC=example,DC=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.security.credentials</param-name>
+      <param-value>Secret123</param-value>
+    </parameter>
+  </connection>
+
+  <connection name="Database">
+    <adapter-name>JDBC</adapter-name>
+    <parameter>
+      <param-name>driver</param-name>
+      <param-value>org.hsqldb.jdbcDriver</param-value>
+    </parameter>
+    <parameter>
+      <param-name>url</param-name>
+      <param-value>jdbc:hsqldb:file:partitions/ipa/db/example</param-value>
+    </parameter>
+    <parameter>
+      <param-name>user</param-name>
+      <param-value>sa</param-value>
+    </parameter>
+    <parameter>
+      <param-name>password</param-name>
+      <param-value></param-value>
+    </parameter>
+    <parameter>
+      <param-name>shutdown</param-name>
+      <param-value>true</param-value>
+    </parameter>
+  </connection>
+
+</connections>

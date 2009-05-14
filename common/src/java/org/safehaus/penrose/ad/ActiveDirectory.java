@@ -17,12 +17,28 @@
  */
 package org.safehaus.penrose.ad;
 
-import org.safehaus.penrose.util.BinaryUtil;
+import org.apache.log4j.Level;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.xml.DOMConfigurator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import gnu.getopt.LongOpt;
+import gnu.getopt.Getopt;
+
+import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.io.File;
+import java.io.FileInputStream;
 
 /**
  * @author Endi S. Dewata
  */
 public class ActiveDirectory {
+
+    public static Logger log = LoggerFactory.getLogger(ActiveDirectory.class);
 
     public static byte[] toUnicodePassword(Object password) throws Exception {
         String newPassword;
@@ -44,76 +60,86 @@ public class ActiveDirectory {
     }
 
     public static String getGUID(byte[] guid) {
-        try {
-            StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
 
-            sb.append(byte2hex(guid[3]));
-            sb.append(byte2hex(guid[2]));
-            sb.append(byte2hex(guid[1]));
-            sb.append(byte2hex(guid[0]));
-            sb.append("-");
-            sb.append(byte2hex(guid[5]));
-            sb.append(byte2hex(guid[4]));
-            sb.append("-");
-            sb.append(byte2hex(guid[7]));
-            sb.append(byte2hex(guid[6]));
-            sb.append("-");
-            sb.append(byte2hex(guid[8]));
-            sb.append(byte2hex(guid[9]));
-            sb.append("-");
-            sb.append(byte2hex(guid[10]));
-            sb.append(byte2hex(guid[11]));
-            sb.append(byte2hex(guid[12]));
-            sb.append(byte2hex(guid[13]));
-            sb.append(byte2hex(guid[14]));
-            sb.append(byte2hex(guid[15]));
+        sb.append(byte2hex(guid[3]));
+        sb.append(byte2hex(guid[2]));
+        sb.append(byte2hex(guid[1]));
+        sb.append(byte2hex(guid[0]));
+        sb.append("-");
+        sb.append(byte2hex(guid[5]));
+        sb.append(byte2hex(guid[4]));
+        sb.append("-");
+        sb.append(byte2hex(guid[7]));
+        sb.append(byte2hex(guid[6]));
+        sb.append("-");
+        sb.append(byte2hex(guid[8]));
+        sb.append(byte2hex(guid[9]));
+        sb.append("-");
+        sb.append(byte2hex(guid[10]));
+        sb.append(byte2hex(guid[11]));
+        sb.append(byte2hex(guid[12]));
+        sb.append(byte2hex(guid[13]));
+        sb.append(byte2hex(guid[14]));
+        sb.append(byte2hex(guid[15]));
 
-            return sb.toString();
-
-        } catch (Exception e) {
-            return BinaryUtil.encode(BinaryUtil.BIG_INTEGER, guid);
-        }
+        return sb.toString();
     }
 
+    /**
+     * http://msdn.microsoft.com/en-us/library/cc230371(PROT.10).aspx
+     * 
+     * @param sid byte array of SID
+     * @return string representation of SID
+     */
     public static String getSID(byte[] sid) {
 
-        try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("S-");
+        boolean debug = log.isDebugEnabled();
 
-             // get version
-            int version = sid[0];
-            sb.append(Integer.toString(version));
-            sb.append("-");
+        StringBuilder sb = new StringBuilder();
+        sb.append("S-");
 
-            // get authority
+         // revision
+        int revision = sid[0];
+        if (debug) log.debug("SID[0] revision: "+ revision);
 
-            String rid = "";
-            for (int i=6; i>0; i--) {
-                rid += byte2hex(sid[i]);
-            }
+        sb.append(revision);
+        sb.append("-");
 
-            long authority = Long.parseLong(rid);
-            sb.append(Long.toString(authority));
+        // sub-authority subAuthorityCount
+        int subAuthorityCount = sid[1]&0xFF;
+        if (debug) log.debug("SID[1] sub-authority count: "+ subAuthorityCount);
 
-            //next byte is the count of sub-authorities
-            int count = sid[7]&0xFF;
-
-            //iterate all the sub-auths
-            for (int i=0;i<count;i++) {
-                rid = "";
-                for (int j=11; j>7; j--) {
-                    rid += byte2hex(sid[j+(i*4)]);
-                }
-                sb.append("-");
-                sb.append(Long.parseLong(rid, 16));
-            }
-
-            return sb.toString();
-
-        } catch (Exception e) {
-            return BinaryUtil.encode(BinaryUtil.BIG_INTEGER, sid);
+        // get authority
+        StringBuilder sb2 = new StringBuilder();
+        for (int i=2; i<=7; i++) {
+            sb2.append(byte2hex(sid[i]));
         }
+        String identifierAuthority = sb2.toString();
+        if (debug) log.debug("SID[2-7] identifier authority: "+identifierAuthority);
+
+        sb.append(Long.parseLong(identifierAuthority, 16));
+
+        //iterate all the sub-auths
+        for (int i=0; i<subAuthorityCount; i++) {
+
+            int start = i*4 + 8;
+            int end = i*4 + 11;
+            if (debug) log.debug("SID["+start+"-"+end+"] sub-authority #"+i+":");
+
+            StringBuilder tmp2 = new StringBuilder();
+            for (int j=end; j>=start; j--) {
+                tmp2.append(byte2hex(sid[j]));
+            }
+
+            String subauthority = tmp2.toString();
+            if (debug) log.debug("SID["+start+"-"+end+"] sub-authority #"+i+": "+subauthority);
+
+            sb.append("-");
+            sb.append(Long.parseLong(subauthority, 16));
+        }
+
+        return sb.toString();
     }
 
     public static String byte2hex(byte b) {
@@ -121,4 +147,146 @@ public class ActiveDirectory {
         return (i <= 0x0F) ? "0" + Integer.toHexString(i) : Integer.toHexString(i);
     }
 
+    public static void executeShowGUIDCommand(String fileName) throws Exception {
+        File file = new File(fileName);
+        FileInputStream in = new FileInputStream(fileName);
+
+        byte[] buffer = new byte[(int)file.length()];
+
+        if (in.read(buffer) == -1) {
+            throw new Exception("Error reading "+fileName+".");
+        }
+
+        in.close();
+
+        String guid = getGUID(buffer);
+        System.out.println(guid);
+    }
+
+    public static void executeShowSidCommand(String fileName) throws Exception {
+        File file = new File(fileName);
+        FileInputStream in = new FileInputStream(fileName);
+
+        byte[] buffer = new byte[(int)file.length()];
+
+        if (in.read(buffer) == -1) {
+            throw new Exception("Error reading "+fileName+".");
+        }
+
+        in.close();
+
+        String sid = getSID(buffer);
+        System.out.println(sid);
+    }
+
+    public static void executeShowCommand(Iterator<String> iterator) throws Exception {
+        String target = iterator.next();
+        if ("guid".equals(target)) {
+            String fileName = iterator.next();
+            executeShowGUIDCommand(fileName);
+
+        } else if ("sid".equals(target)) {
+            String fileName = iterator.next();
+            executeShowSidCommand(fileName);
+
+        } else {
+            System.out.println("Invalid type: "+target);
+        }
+    }
+
+    public static void executeCommand(Collection<String> parameters) throws Exception {
+
+        Iterator<String> iterator = parameters.iterator();
+        String command = iterator.next();
+        //System.out.println("Executing "+command);
+
+        if ("show".equals(command)) {
+            executeShowCommand(iterator);
+
+        } else {
+            System.out.println("Invalid command: "+command);
+        }
+    }
+
+    public static void showUsage() {
+        System.out.println("Usage: org.safehaus.penrose.ad.ActiveDirectory [OPTION]... <COMMAND>");
+        System.out.println();
+        System.out.println("Options:");
+        System.out.println("  -?, --help         display this help and exit");
+        System.out.println("  -d                 run in debug mode");
+        System.out.println("  -v                 run in verbose mode");
+        System.out.println();
+        System.out.println("Commands:");
+        System.out.println();
+        System.out.println("  show sid <file name>");
+    }
+
+    public static void main(String args[]) {
+
+        Level level          = Level.WARN;
+
+        LongOpt[] longopts = new LongOpt[1];
+        longopts[0] = new LongOpt("help", LongOpt.NO_ARGUMENT, null, '?');
+
+        Getopt getopt = new Getopt("ActiveDirectory", args, "-:?dvt:h:p:r:P:D:w:", longopts);
+
+        Collection<String> parameters = new ArrayList<String>();
+        int c;
+        while ((c = getopt.getopt()) != -1) {
+            switch (c) {
+                case ':':
+                case '?':
+                    showUsage();
+                    System.exit(0);
+                    break;
+                case 1:
+                    parameters.add(getopt.getOptarg());
+                    break;
+                case 'd':
+                    level = Level.DEBUG;
+                    break;
+                case 'v':
+                    level = Level.INFO;
+                    break;
+            }
+        }
+
+        if (parameters.size() == 0) {
+            showUsage();
+            System.exit(0);
+        }
+
+        org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger("org.safehaus.penrose");
+
+        File log4jXml = new File("conf"+File.separator+"log4j.xml");
+
+        if (level.equals(Level.DEBUG)) {
+            logger.setLevel(level);
+            ConsoleAppender appender = new ConsoleAppender(new PatternLayout("%-20C{1} [%4L] %m%n"));
+            BasicConfigurator.configure(appender);
+
+        } else if (level.equals(Level.INFO)) {
+            logger.setLevel(level);
+            ConsoleAppender appender = new ConsoleAppender(new PatternLayout("[%d{MM/dd/yyyy HH:mm:ss}] %m%n"));
+            BasicConfigurator.configure(appender);
+
+        } else if (log4jXml.exists()) {
+            DOMConfigurator.configure(log4jXml.getAbsolutePath());
+
+        } else {
+            logger.setLevel(level);
+            ConsoleAppender appender = new ConsoleAppender(new PatternLayout("[%d{MM/dd/yyyy HH:mm:ss}] %m%n"));
+            BasicConfigurator.configure(appender);
+        }
+
+        try {
+            executeCommand(parameters);
+
+        } catch (SecurityException e) {
+            log.error(e.getMessage());
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 }

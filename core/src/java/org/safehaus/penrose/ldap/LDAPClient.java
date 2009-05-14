@@ -144,7 +144,7 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
         return new LDAPAuthProvider(bindDn, bindPassword);
     }
 
-    public synchronized void close() throws Exception {
+    public void close() throws Exception {
         log.debug("Closing LDAP connection.");
         if (connection != null) connection.disconnect();
     }

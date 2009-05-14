@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE modules PUBLIC
+  "-//Penrose/DTD Modules ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/modules.dtd">
+
+<modules>
+
+  <module name="users">
+    <module-class>org.safehaus.penrose.ipa.module.SambaSyncModule</module-class>
+    <parameter>
+      <param-name>source</param-name>
+      <param-value>ipa</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceUsers</param-name>
+      <param-value>ipa_users</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceGroups</param-name>
+      <param-value>ipa_groups</param-value>
+    </parameter>
+    <parameter>
+      <param-name>target</param-name>
+      <param-value>samba</param-value>
+    </parameter>
+    <parameter>
+      <param-name>changelog</param-name>
+      <param-value>ipa_changelog</param-value>
+    </parameter>
+    <parameter>
+      <param-name>tracker</param-name>
+      <param-value>ipa_tracker</param-value>
+    </parameter>
+  </module>
+
+</modules>

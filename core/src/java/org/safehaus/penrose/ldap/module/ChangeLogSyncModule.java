@@ -12,10 +12,8 @@ import org.safehaus.penrose.module.Module;
 import org.safehaus.penrose.schema.SchemaManager;
 import org.safehaus.penrose.session.Session;
 import org.safehaus.penrose.source.SourceManager;
-import org.safehaus.penrose.util.BinaryUtil;
+import org.safehaus.penrose.changelog.ChangeLog;
 
-import java.io.BufferedReader;
-import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -292,57 +290,14 @@ public class ChangeLogSyncModule extends Module {
 
     public Attributes createAttributes(String changes) throws Exception {
 
-        boolean debug = log.isDebugEnabled();
         Attributes attributes = new Attributes();
 
-        BufferedReader in = new BufferedReader(new StringReader(changes));
-
         SchemaManager schemaManager = partition.getSchemaManager();
+        Attributes list = ChangeLog.parseAttributes(changes);
 
-        String attributeName = null;
-        boolean binary = false;
-        StringBuilder sb = new StringBuilder();
-
-        String line;
-        while ((line = in.readLine()) != null) {
-
-            if (debug) log.debug("Parsing ["+line+"]");
-
-            if (line.startsWith(" ")) {
-                sb.append(line.substring(1));
-                continue;
-            }
-
-            if (attributeName != null) {
-                String s = sb.toString().trim();
-                Object value = binary ? BinaryUtil.decode(BinaryUtil.BIG_INTEGER, s) : s;
-
-                boolean operational = schemaManager.isOperational(attributeName);
-                if (!operational) attributes.addValue(attributeName, value);
-                sb = new StringBuilder();
-            }
-
-            int i = line.indexOf(":");
-            attributeName = line.substring(0, i);
-
-            i++;
-            if (line.charAt(i) == ':') {
-                binary = true;
-                i++;
-
-            } else {
-                binary = false;
-            }
-
-            sb.append(line.substring(i));
-        }
-
-        if (attributeName != null) {
-            String s = sb.toString().trim();
-            Object value = binary ? BinaryUtil.decode(BinaryUtil.BIG_INTEGER, s) : s;
-
-            boolean operational = schemaManager.isOperational(attributeName);
-            if (!operational) attributes.addValue(attributeName, value);
+        for (Attribute attribute : list.getAll()) {
+            boolean operational = schemaManager.isOperational(attribute.getName());
+            if (!operational) attributes.add(attribute);
         }
 
         return attributes;
@@ -350,78 +305,14 @@ public class ChangeLogSyncModule extends Module {
 
     public Collection<Modification> createModifications(String changes) throws Exception {
 
-        boolean debug = log.isDebugEnabled();
         Collection<Modification> modifications = new ArrayList<Modification>();
 
-        BufferedReader in = new BufferedReader(new StringReader(changes));
-
         SchemaManager schemaManager = partition.getSchemaManager();
+        Collection<Modification> list = ChangeLog.parseModifications(changes);
 
-        int operation = 0;
-        String attributeName;
-        boolean binary = false;
-        StringBuilder sb = null;
-        Attribute attribute = null;
-
-        String line;
-        while ((line = in.readLine()) != null) {
-
-            if (debug) log.debug("Parsing ["+line+"]");
-
-            line = line.trim();
-            if (line.length() == 0) continue;
-
-            if (line.startsWith(" ") && sb != null) {
-                sb.append(line.substring(1));
-                continue;
-            }
-
-            if (line.equals("-") && attribute != null && sb != null) {
-                String s = sb.toString().trim();
-                Object value = binary ? BinaryUtil.decode(BinaryUtil.BIG_INTEGER, s) : s;
-
-                attribute.addValue(value);
-
-                boolean operational = schemaManager.isOperational(attribute.getName());
-                if (!operational) {
-                    Modification modification = new Modification(operation, attribute);
-                    modifications.add(modification);
-                }
-
-                operation = 0;
-                sb = null;
-                continue;
-            }
-
-            int i = line.indexOf(":");
-
-            if (operation == 0) {
-                operation = LDAP.getModificationOperation(line.substring(0, i));
-                attributeName = line.substring(i+1).trim();
-
-                attribute = new Attribute(attributeName);
-                continue;
-            }
-
-            if (sb != null) {
-                String s = sb.toString().trim();
-                Object value = binary ? BinaryUtil.decode(BinaryUtil.BIG_INTEGER, s) : s;
-
-                attribute.addValue(value);
-            }
-
-            i++;
-
-            if (line.charAt(i) == ':') {
-                binary = true;
-                i++;
-
-            } else {
-                binary = false;
-            }
-
-            sb = new StringBuilder();
-            sb.append(line.substring(i));
+        for (Modification modification : list) {
+            boolean operational = schemaManager.isOperational(modification.getAttribute().getName());
+            if (!operational) modifications.add(modification);
         }
 
         return modifications;

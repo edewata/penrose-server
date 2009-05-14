@@ -102,9 +102,7 @@
           <root url="file://$MODULE_DIR$/server/lib" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES>
-          <root url="file://C:/projects/OpenLDAP/JLDAP" />
-        </SOURCES>
+        <SOURCES />
         <jarDirectory url="file://$MODULE_DIR$/common/lib" recursive="false" />
         <jarDirectory url="file://$MODULE_DIR$/core/lib" recursive="false" />
         <jarDirectory url="file://$MODULE_DIR$/lib/ant" recursive="false" />

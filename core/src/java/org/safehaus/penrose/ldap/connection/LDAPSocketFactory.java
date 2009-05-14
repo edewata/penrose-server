@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Collection;
+import java.util.ArrayList;
 
 /**
  * @author Endi Sukma Dewata
@@ -18,6 +19,13 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
     protected Integer timeout;
 
     protected SocketFactory factory;
+
+    public LDAPSocketFactory(LDAPUrl url) {
+        urls = new ArrayList<LDAPUrl>();
+        urls.add(url);
+
+        factory = SSLSocketFactory.getDefault();
+    }
 
     public LDAPSocketFactory(Collection<LDAPUrl> urls) {
         this.urls = urls;

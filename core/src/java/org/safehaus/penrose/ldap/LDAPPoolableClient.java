@@ -29,7 +29,7 @@ public class LDAPPoolableClient extends LDAPClient {
         initConnection();
     }
 
-    public synchronized void close() throws Exception {
+    public void close() throws Exception {
         log.debug("Returning LDAP connection to connection pool.");
         objectPool.returnObject(connection);
     }

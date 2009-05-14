@@ -175,9 +175,10 @@ public class LDAPConnection extends Connection {
         session.addListener(new SessionListener() {
             public void sessionClosed() throws Exception {
 
-                if (debug) log.debug("Closing LDAP client.");
-
+                if (debug) log.debug("Removing session attribute "+attributeName+".");
                 session.removeAttribute(attributeName);
+
+                if (debug) log.debug("Closing LDAP client.");
                 newClient.close();
             }
         });
