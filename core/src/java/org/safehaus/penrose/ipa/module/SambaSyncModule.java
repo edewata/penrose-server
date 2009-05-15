@@ -305,6 +305,17 @@ public class SambaSyncModule extends Module implements Runnable {
         return searchResponse.next();
     }
 
+    public DN getTargetGroupDn(DN sourceGroupDn) throws Exception {
+
+        RDN rdn = sourceGroupDn.getRdn();
+
+        RDNBuilder rb = new RDNBuilder();
+        rb.set("CN", rdn.get("cn"));
+        RDN targetRdn = rb.toRdn();
+
+        return targetRdn.append("CN=Users").append(target.getBaseDn());
+    }
+
     public void addGroup(Session session, DN dn, Attributes attributes) throws Exception {
 
         log.debug(TextUtil.displaySeparator(60));
@@ -316,18 +327,14 @@ public class SambaSyncModule extends Module implements Runnable {
 
         log.debug("");
 
-        RDNBuilder rb = new RDNBuilder();
-        rb.set("CN", attributes.getValue("cn"));
-        RDN rdn = rb.toRdn();
-
-        DN newDn = rdn.append("CN=Users").append(target.getBaseDn());
+        DN targetDn = getTargetGroupDn(dn);
 
         Attributes newAttributes = new Attributes();
         newAttributes.addValue("objectClass", "group");
         newAttributes.setValue("description", attributes.getValue("description"));
 
         AddRequest addRequest = new AddRequest();
-        addRequest.setDn(newDn);
+        addRequest.setDn(targetDn);
         addRequest.setAttributes(newAttributes);
 
         AddResponse addResponse = new AddResponse();
@@ -350,6 +357,50 @@ public class SambaSyncModule extends Module implements Runnable {
         }
 
         log.debug("");
+
+        Modification modification = null;
+
+        for (Modification m : modifications) {
+            Attribute attribute = m.getAttribute();
+            if ("member".equals(attribute.getName())) {
+                modification = m;
+                break;
+            }
+        }
+
+        if (modification == null) return;
+        
+        Attribute attribute = modification.getAttribute();
+        DN memberDn = new DN(attribute.getValue().toString());
+
+        DN targetMemberDn;
+
+        if (memberDn.endsWith(sourceUsers.getBaseDn())) {
+            SearchResult searchResult = findUser(session, memberDn);
+            if (searchResult == null) return;
+
+            targetMemberDn = searchResult.getDn();
+
+        } else if (memberDn.endsWith(sourceGroups.getBaseDn())) {
+            targetMemberDn = getTargetGroupDn(memberDn);
+
+        } else {
+            return;
+        }
+
+        DN targetDn = getTargetGroupDn(dn);
+
+        ModifyRequest modifyRequest = new ModifyRequest();
+        modifyRequest.setDn(targetDn);
+
+        modifyRequest.addModification(new Modification(
+                modification.getType(),
+                new Attribute("member", targetMemberDn.toString())
+        ));
+
+        ModifyResponse modifyResponse = new ModifyResponse();
+
+        target.modify(session, modifyRequest, modifyResponse);
     }
 
     public void deleteGroup(Session session, DN dn) throws Exception {
@@ -359,16 +410,10 @@ public class SambaSyncModule extends Module implements Runnable {
         log.debug(TextUtil.displayLine(" - "+dn, 60));
         log.debug(TextUtil.displaySeparator(60));
 
-        RDN rdn = dn.getRdn();
-
-        RDNBuilder rb = new RDNBuilder();
-        rb.set("CN", rdn.get("cn"));
-        RDN newRdn = rb.toRdn();
-
-        DN newDn = newRdn.append("CN=Users").append(target.getBaseDn());
+        DN targetDn = getTargetGroupDn(dn);
 
         DeleteRequest deleteRequest = new DeleteRequest();
-        deleteRequest.setDn(newDn);
+        deleteRequest.setDn(targetDn);
 
         DeleteResponse deleteResponse = new DeleteResponse();
 
