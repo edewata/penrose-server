@@ -358,19 +358,29 @@ public class SambaSyncModule extends Module implements Runnable {
 
         log.debug("");
 
-        Modification modification = null;
+        Modification memberModification = null;
+        Modification modifiersNameModification = null;
 
-        for (Modification m : modifications) {
-            Attribute attribute = m.getAttribute();
-            if ("member".equals(attribute.getName())) {
-                modification = m;
-                break;
+        for (Modification modification : modifications) {
+            Attribute attribute = modification.getAttribute();
+            String attributeName = attribute.getName();
+
+            if ("member".equalsIgnoreCase(attributeName)) {
+                memberModification = modification;
+
+            } else if ("modifiersName".equalsIgnoreCase(attributeName)) {
+                modifiersNameModification = modification;
             }
         }
 
-        if (modification == null) return;
+        if (modifiersNameModification != null) {
+            DN modifiersName = new DN(modifiersNameModification.getAttribute().getValue().toString());
+            if (modifiersName.endsWith("cn=plugins,cn=config")) return;
+        }
+
+        if (memberModification == null) return;
         
-        Attribute attribute = modification.getAttribute();
+        Attribute attribute = memberModification.getAttribute();
         DN memberDn = new DN(attribute.getValue().toString());
 
         DN targetMemberDn;
@@ -394,7 +404,7 @@ public class SambaSyncModule extends Module implements Runnable {
         modifyRequest.setDn(targetDn);
 
         modifyRequest.addModification(new Modification(
-                modification.getType(),
+                memberModification.getType(),
                 new Attribute("member", targetMemberDn.toString())
         ));
 

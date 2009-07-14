@@ -71,7 +71,7 @@
     <connection-name>Samba</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>CN=Users,CN=IPA,DC=example,DC=com</param-value>
+      <param-value>CN=Users,DC=example,DC=com</param-value>
     </parameter>
   </source>
 
@@ -79,7 +79,7 @@
     <connection-name>Samba</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>CN=Groups,CN=IPA,DC=example,DC=com</param-value>
+      <param-value>CN=Users,DC=example,DC=com</param-value>
     </parameter>
   </source>
 
@@ -87,7 +87,7 @@
     <connection-name>Samba</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>CN=Groups,CN=IPA,DC=example,DC=com</param-value>
+      <param-value>CN=Computers,DC=example,DC=com</param-value>
     </parameter>
   </source>
 
