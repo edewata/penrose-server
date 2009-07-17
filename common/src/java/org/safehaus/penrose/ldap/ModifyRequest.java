@@ -36,6 +36,10 @@ public class ModifyRequest extends Request implements Cloneable {
         this.dn = dn;
     }
 
+    public boolean isEmpty() {
+        return modifications.isEmpty();
+    }
+
     public Collection<Modification> getModifications() {
         return modifications;
     }

@@ -5,8 +5,72 @@
 
 <modules>
 
-  <module name="users">
-    <module-class>org.safehaus.penrose.ipa.module.SambaSyncModule</module-class>
+  <module name="IPAModule">
+    <module-class>org.safehaus.penrose.ipa.module.IPAModule</module-class>
+    <parameter>
+      <param-name>source</param-name>
+      <param-value>ipa</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceUsers</param-name>
+      <param-value>ipa_users</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceGroups</param-name>
+      <param-value>ipa_groups</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceHosts</param-name>
+      <param-value>ipa_hosts</param-value>
+    </parameter>
+    <parameter>
+      <param-name>target</param-name>
+      <param-value>samba</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetUsers</param-name>
+      <param-value>samba_users</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetGroups</param-name>
+      <param-value>samba_groups</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetHosts</param-name>
+      <param-value>samba_hosts</param-value>
+    </parameter>
+    <parameter>
+      <param-name>changelog</param-name>
+      <param-value>ipa_changelog</param-value>
+    </parameter>
+    <parameter>
+      <param-name>tracker</param-name>
+      <param-value>ipa_tracker</param-value>
+    </parameter>
+  </module>
+
+  <module name="IPAUserModule">
+    <module-class>org.safehaus.penrose.ipa.module.IPAUserModule</module-class>
+    <parameter>
+      <param-name>source</param-name>
+      <param-value>ipa</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceUsers</param-name>
+      <param-value>ipa_users</param-value>
+    </parameter>
+    <parameter>
+      <param-name>target</param-name>
+      <param-value>samba</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetUsers</param-name>
+      <param-value>samba_users</param-value>
+    </parameter>
+  </module>
+
+  <module name="IPAGroupModule">
+    <module-class>org.safehaus.penrose.ipa.module.IPAGroupModule</module-class>
     <parameter>
       <param-name>source</param-name>
       <param-value>ipa</param-value>
@@ -24,12 +88,12 @@
       <param-value>samba</param-value>
     </parameter>
     <parameter>
-      <param-name>changelog</param-name>
-      <param-value>ipa_changelog</param-value>
+      <param-name>targetUsers</param-name>
+      <param-value>samba_users</param-value>
     </parameter>
     <parameter>
-      <param-name>tracker</param-name>
-      <param-value>ipa_tracker</param-value>
+      <param-name>targetGroups</param-name>
+      <param-value>samba_groups</param-value>
     </parameter>
   </module>
 

@@ -747,6 +747,8 @@ public class LDAPSource extends Source {
 
             } else {
 
+                baseDn = baseDn == null ? sourceBaseDn : baseDn;
+
                 if (debug) log.debug("Searching subtree \""+baseDn+"\".");
 
                 if (sourceScope == SearchRequest.SCOPE_BASE) {
@@ -758,7 +760,7 @@ public class LDAPSource extends Source {
                 }
 
                 SearchRequest newRequest = new SearchRequest();
-                newRequest.setDn(baseDn == null ? sourceBaseDn : baseDn);
+                newRequest.setDn(baseDn);
                 newRequest.setScope(scope);
 
                 newRequest.setFilter(filter);
@@ -853,8 +855,8 @@ public class LDAPSource extends Source {
                             }
 
                             SearchResult newSearchResult = createSearchResult(sourceBaseDn, searchResult);
-                            DN newDn = new DN(newSearchResult.getDn().getRdn());
-                            newSearchResult.setDn(newDn);
+                            //DN newDn = new DN(newSearchResult.getDn().getRdn());
+                            //newSearchResult.setDn(newDn);
 
                             if (debug) {
                                 newSearchResult.print();
@@ -902,8 +904,8 @@ public class LDAPSource extends Source {
                         }
 
                         SearchResult newSearchResult = createSearchResult(sourceBaseDn, searchResult);
-                        DN newDn = new DN(newSearchResult.getDn().getRdn());
-                        newSearchResult.setDn(newDn);
+                        //DN newDn = new DN(newSearchResult.getDn().getRdn());
+                        //newSearchResult.setDn(newDn);
 
                         if (debug) {
                             newSearchResult.print();
@@ -941,8 +943,8 @@ public class LDAPSource extends Source {
                         }
 
                         SearchResult newSearchResult = createSearchResult(sourceBaseDn, searchResult);
-                        DN newDn = new DN(newSearchResult.getDn().getRdn());
-                        newSearchResult.setDn(newDn);
+                        //DN newDn = new DN(newSearchResult.getDn().getRdn());
+                        //newSearchResult.setDn(newDn);
 
                         if (debug) {
                             newSearchResult.print();
