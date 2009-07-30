@@ -97,4 +97,4 @@ exec "$JAVACMD" $VD_SERVER_OPTS \
 -Djava.ext.dirs="$LOCALLIBPATH" \
 -Djava.library.path="$LOCALLIBPATH" \
 -Dpenrose.home="$VD_SERVER_HOME" \
-org.safehaus.penrose.activeDirectory.client.ADSyncClient "$@"
+org.safehaus.penrose.ad.client.ADSyncClient "$@"

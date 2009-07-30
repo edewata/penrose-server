@@ -74,4 +74,19 @@ public class TextUtil {
         for (int i=0; i<length; i++) sb.append(s);
         return sb.toString();
     }
+
+    public static String toString(Object object, int length) {
+        String s = toString(object);
+        if (s == null) return null;
+        if (s.length() <= length) return s;
+        return s.substring(0, length-3)+"...";
+    }
+
+    public static String toString(Object object) {
+        if (object == null) return null;
+        if (object instanceof byte[]) {
+            return BinaryUtil.encode(BinaryUtil.BIG_INTEGER, (byte[])object);
+        }
+        return object.toString();
+    }
 }

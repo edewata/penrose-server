@@ -7,6 +7,7 @@ import org.safehaus.penrose.module.ModuleReader;
 import org.safehaus.penrose.module.ModuleWriter;
 import org.safehaus.penrose.mapping.MappingReader;
 import org.safehaus.penrose.mapping.MappingWriter;
+import org.safehaus.penrose.mapping.MappingConfigManager;
 import org.safehaus.penrose.connection.ConnectionConfig;
 import org.safehaus.penrose.connection.ConnectionReader;
 import org.safehaus.penrose.connection.ConnectionWriter;
@@ -238,9 +239,14 @@ public class PartitionManager {
         SourceReader sourceReader = new SourceReader();
         sourceReader.read(sourcesXml, partitionConfig.getSourceConfigManager());
 
-        File mappingsXml = new File(baseDir, "mappings.xml");
+        MappingConfigManager mappingConfigManager = partitionConfig.getMappingConfigManager();
         MappingReader mappingReader = new MappingReader();
-        mappingReader.read(mappingsXml, partitionConfig.getMappingConfigManager());
+
+        mappingReader.read(new File(baseDir, "mappings.xml"), mappingConfigManager);
+
+        for (String mappingFile : partitionConfig.getMappingFiles()) {
+            mappingReader.read(new File(partitionDir, mappingFile), mappingConfigManager);
+        }
 
         File directoryXml = new File(baseDir, "directory.xml");
         DirectoryReader directoryReader = new DirectoryReader();

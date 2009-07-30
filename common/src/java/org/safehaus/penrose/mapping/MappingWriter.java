@@ -112,6 +112,9 @@ public class MappingWriter {
         Element element = new DefaultElement("rule");
         element.add(new DefaultAttribute("name", ruleConfig.getName()));
 
+        String action = ruleConfig.getAction();
+        if (!MappingRuleConfig.REPLACE.equals(action)) element.add(new DefaultAttribute("action", action));
+
         if (!ruleConfig.isRequired()) {
             element.add(new DefaultAttribute("required", "false"));
         }

@@ -80,12 +80,15 @@ public abstract class Interpreter {
 
     public void set(String prefix, Attributes attributes) throws Exception {
         for (String name : attributes.getNames()) {
-            Collection list = attributes.getValues(name);
+            Collection<Object> values = attributes.getValues(name);
+            if (log.isDebugEnabled()) log.debug("Setting "+name+": "+values);
 
             Object value;
-            if (list.size() == 1) {
-                value = list.iterator().next();
+            if (values.size() == 1) {
+                value = values.iterator().next();
             } else {
+                Collection<Object> list = new ArrayList<Object>();
+                list.addAll(values);
                 value = list;
             }
 

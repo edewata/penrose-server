@@ -27,9 +27,7 @@ import org.slf4j.LoggerFactory;
 import gnu.getopt.LongOpt;
 import gnu.getopt.Getopt;
 
-import java.util.Collection;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.*;
 import java.io.File;
 import java.io.FileInputStream;
 
@@ -39,6 +37,29 @@ import java.io.FileInputStream;
 public class ActiveDirectory {
 
     public static Logger log = LoggerFactory.getLogger(ActiveDirectory.class);
+
+    public static final long MIN_TIMESTAMP; // 1601-01-01T00:00:00Z
+    public static final long MAX_TIMESTAMP = 9223372036854775807l;
+
+    static {
+        Calendar cal = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        cal.clear();
+        cal.set(1601, 0, 1, 0, 0);
+        MIN_TIMESTAMP = cal.getTime().getTime();
+    }
+
+    public static Date toDate(String timestamp) {
+        return toDate(Long.parseLong(timestamp));
+    }
+    
+    public static Date toDate(long timestamp) {
+        return new Date(MIN_TIMESTAMP + (timestamp/10000));
+    }
+
+    public static long toTimestamp(Date date) {
+        if (date == null) return MIN_TIMESTAMP * 10000;
+        return (date.getTime() - MIN_TIMESTAMP) * 10000;
+    }
 
     public static byte[] toUnicodePassword(Object password) throws Exception {
         String newPassword;

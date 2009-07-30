@@ -154,7 +154,11 @@ public class SearchResult implements Serializable, Cloneable {
                 String className = value.getClass().getName();
                 className = className.substring(className.lastIndexOf(".") + 1);
 
-                log.debug(TextUtil.displayLine(" - " + name + ": " + value + " (" + className + ")", 70));
+                String s1 = " - "+name+": ";
+                String s3 = " ("+className+")";
+
+                String s2 = TextUtil.toString(value, 70-4-s1.length()-s3.length());
+                log.debug(TextUtil.displayLine(s1+s2+s3, 70));
             }
         }
 

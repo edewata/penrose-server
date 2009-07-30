@@ -333,6 +333,10 @@ public class Source implements Cloneable {
         return sessionManager.createAdminSession();
     }
 
+    public SearchResult find(String dn) throws Exception {
+        return find(new DN(dn));
+    }
+
     public SearchResult find(DN dn) throws Exception {
 
         Session session = createAdminSession();

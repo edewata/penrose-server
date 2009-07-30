@@ -39,6 +39,7 @@ public class MappingRuleConfig implements Serializable, Cloneable {
 
     public final static String ADD            = "add";
     public final static String REPLACE        = "replace";
+    public final static String DELETE         = "delete";
 
     public final static String CONSTANT       = "CONSTANT";
     public final static String VARIABLE       = "VARIABLE";
@@ -46,7 +47,7 @@ public class MappingRuleConfig implements Serializable, Cloneable {
 
     protected String name;
 
-    protected String action    = ADD;
+    protected String action    = REPLACE;
     protected boolean required = true;
     protected String condition;
 

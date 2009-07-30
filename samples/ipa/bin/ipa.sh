@@ -12,6 +12,11 @@ case "`uname`" in
            ;;
 esac
 
+PRG="$0"
+progname=`basename "$PRG"`
+dirname_prg=`dirname "$PRG"`
+saveddir=`pwd`
+
 if [ -z "$VD_SERVER_HOME" ] ; then
   # try to find PENROSE
   if [ -d /opt/penrose ] ; then
@@ -22,13 +27,6 @@ if [ -z "$VD_SERVER_HOME" ] ; then
     VD_SERVER_HOME="$HOME/opt/penrose"
   fi
 
-  ## resolve links - $0 may be a link to Penrose's home
-  PRG="$0"
-  progname=`basename "$0"`
-  saveddir=`pwd`
-
-  # need this for relative symlinks
-  dirname_prg=`dirname "$PRG"`
   cd "$dirname_prg"
 
   while [ -h "$PRG" ] ; do
@@ -48,6 +46,10 @@ if [ -z "$VD_SERVER_HOME" ] ; then
   # make it fully qualified
   VD_SERVER_HOME=`cd "$VD_SERVER_HOME" && pwd`
 fi
+
+partition_home=`dirname "$PRG"`/..
+partition_home=`cd "$partition_home" && pwd`
+partition_name=`basename "$partition_home"`
 
 # For Cygwin, ensure paths are in UNIX format before anything is touched
 if $cygwin ; then
@@ -97,4 +99,5 @@ exec "$JAVACMD" $VD_SERVER_OPTS \
 -Djava.ext.dirs="$LOCALLIBPATH" \
 -Djava.library.path="$LOCALLIBPATH" \
 -Dpenrose.home="$VD_SERVER_HOME" \
+-Dpartition.name="$partition_name" \
 org.safehaus.penrose.ipa.IPAClient "$@"

@@ -2,6 +2,11 @@ package org.safehaus.penrose.mapping;
 
 import org.safehaus.penrose.interpreter.Interpreter;
 import org.safehaus.penrose.ldap.Attributes;
+import org.safehaus.penrose.ldap.ModifyRequest;
+import org.safehaus.penrose.ldap.Modification;
+import org.safehaus.penrose.ldap.Attribute;
+import org.safehaus.penrose.util.BinaryUtil;
+import org.safehaus.penrose.util.TextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,87 +164,163 @@ public class Mapping {
 
         for (MappingRule rule : getRules()) {
             String name = rule.getName();
-
+            String action = rule.getAction();
             boolean required = rule.isRequired();
-            if (!required) {
-                Object value = interpreter.get(name);
-                if (value != null) {
-                    //if (debug) log.debug(" - Skipping "+name+": value has been set");
-                    continue;
+
+            if (debug) {
+                log.debug(" - Processing mapping rule for "+name);
+                log.debug("   Action: "+action);
+                log.debug("   Required: "+required);
+            }
+
+            Object oldValue = interpreter.get(name);
+
+            if (oldValue instanceof Collection) {
+                Collection<Object> list = (Collection<Object>)oldValue;
+                if (list.size() == 0) {
+                    oldValue = null;
+                } else if (list.size() == 1) {
+                    oldValue = list.iterator().next();
                 }
+            }
+            
+            if (debug) log.debug("   Old value: "+TextUtil.toString(oldValue, 10));
+/*
+            if (!required && oldValue != null) {
+                if (debug) log.debug(" - Skipping "+name+": value has been set");
+                continue;
             }
 
             String variable = rule.getVariable();
             if (variable != null) {
                 Object variableValue = interpreter.get(variable);
                 if (variableValue == null) {
-                    //if (debug) log.debug(" - Skipping "+name+": "+variable+" is undefined");
+                    if (debug) log.debug(" - Skipping "+name+": "+variable+" is undefined");
                     continue;
                 }
             }
+*/
             String condition = rule.getCondition();
             if (condition != null) {
                 Object conditionValue = interpreter.eval(condition);
                 if (!(conditionValue instanceof Boolean && (Boolean) conditionValue)) {
                     if (debug) {
                         //String className = conditionValue == null ? "" : " ("+conditionValue.getClass().getName()+")";
-                        //log.debug(" - Skipping "+name+": condition is "+ conditionValue);
+                        log.debug("   ==> Skipping "+name+": condition is "+ conditionValue);
                     }
                     continue;
                 }
             }
 
             Object newValue = interpreter.eval(rule);
+            if (debug) log.debug("   New value: "+TextUtil.toString(newValue, 10));
+/*
             if (newValue == null) {
-                //if (debug) log.debug(" - Skipping "+name+": value is null");
+                if (debug) log.debug(" - Skipping "+name+": value is null");
                 continue;
             }
-
-            Object oldValue = interpreter.get(name);
+*/
             //if (debug) {
             //    String className = oldValue == null ? "" : " ("+oldValue.getClass().getName()+")";
             //    log.debug("   Old value: "+oldValue+className);
             //}
 
-            boolean add = MappingRuleConfig.ADD.equals(rule.getAction());
-            if (debug) {
-                if (add) {
-                    log.debug(" - Adding "+name+": "+newValue+" ("+newValue.getClass().getName()+")");
+            if (MappingRuleConfig.ADD.equals(action)) {
+
+                if (oldValue == newValue || newValue == null) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else if (oldValue == null) {
+                    if (debug) log.debug("   ==> Adding new values");
+                    interpreter.set(name, newValue);
+
+                } else if (oldValue instanceof Collection) {
+                    if (debug) log.debug("   ==> Adding new values");
+                    Collection<Object> list = (Collection<Object>)oldValue;
+                    if (newValue instanceof Collection) {
+                        list.addAll((Collection<Object>)newValue);
+                    } else {
+                        list.add(newValue);
+                    }
+
+                } else if (oldValue.equals(newValue)) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
                 } else {
-                    log.debug(" - Replacing "+name+": "+newValue+" ("+newValue.getClass().getName()+")");
+                    if (debug) log.debug("   ==> Adding new values");
+                    Collection<Object> list = new LinkedHashSet<Object>();
+                    list.add(oldValue);
+                    if (newValue instanceof Collection) {
+                        list.addAll((Collection<Object>)newValue);
+                    } else {
+                        list.add(newValue);
+                    }
+                    interpreter.set(name, list);
                 }
-            }
 
-            if (oldValue == newValue) {
-                // skip
-                
-            } else if (oldValue == null) {
-                interpreter.set(name, newValue);
+            } else if (MappingRuleConfig.REPLACE.equals(action)) {
 
-            } else if (oldValue instanceof Collection) {
-                Collection<Object> list = (Collection<Object>)oldValue;
-                if (!add) list.clear();
-                if (newValue instanceof Collection) {
-                    list.addAll((Collection<Object>)newValue);
+                if (oldValue == newValue) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else if (oldValue == null) {
+                    if (newValue == null) {
+                        // skip
+
+                    } else if (newValue instanceof Collection && !((Collection)newValue).isEmpty()) {
+                        if (debug) log.debug("   ==> Adding new values");
+                        interpreter.set(name, newValue);
+
+                    } else {
+                        if (debug) log.debug("   ==> Adding new values");
+                        interpreter.set(name, newValue);
+                    }
+
+                } else if (oldValue instanceof Collection) {
+                    if (debug) log.debug("   ==> Adding new values");
+                    Collection<Object> list = (Collection<Object>)oldValue;
+                    list.clear();
+                    if (newValue instanceof Collection) {
+                        list.addAll((Collection<Object>)newValue);
+                    } else {
+                        list.add(newValue);
+                    }
+
+                } else if (oldValue.equals(newValue)) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
                 } else {
-                    list.add(newValue);
+                    if (debug) log.debug("   ==> Replacing old values");
+                    interpreter.set(name, newValue);
                 }
 
-            } else if (oldValue.equals(newValue)) {
-                // skip
+            } else if (MappingRuleConfig.DELETE.equals(action)) {
 
-            } else if (add) {
-                Collection<Object> list = new LinkedHashSet<Object>();
-                list.add(oldValue);
-                if (newValue instanceof Collection) {
-                    list.addAll((Collection<Object>)newValue);
-                } else {
-                    list.add(newValue);
+                if (oldValue == newValue || newValue == null) {
+                    if (debug) log.debug("   ==> Deleting all values");
+                    interpreter.set(name, (Object)null);
+
+                } else if (oldValue == null) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else if (oldValue instanceof Collection) {
+                    if (debug) log.debug("   ==> Deleting "+newValue);
+                    Collection<Object> list = (Collection<Object>)oldValue;
+                    if (newValue instanceof Collection) {
+                        list.removeAll((Collection<Object>)newValue);
+                    } else {
+                        list.remove(newValue);
+                    }
+
+                } else if (oldValue.equals(newValue)) {
+                    if (debug) log.debug("   ==> Deleting all values");
+                    interpreter.set(name, (Object)null);
                 }
-                interpreter.set(name, list);
-
-            } else { // replace
-                interpreter.set(name, newValue);
             }
         }
 
@@ -258,11 +339,201 @@ public class Mapping {
 
             if (value instanceof Collection) {
                 Collection<Object> list = (Collection<Object>)value;
-                output.setValues(name, list);
+                if (!list.isEmpty()) output.setValues(name, list);
 
             } else {
                 output.setValue(name, value);
             }
+        }
+    }
+
+    public void map(Interpreter interpreter, Attributes attributes, ModifyRequest request) throws Exception {
+
+        boolean debug = log.isDebugEnabled();
+        if (debug) log.debug("Executing "+mappingConfig.getName()+" mapping:");
+
+        String preMapping = mappingConfig.getPreScript();
+        if (preMapping != null) {
+            if (debug) log.debug(" - Executing pre-script");
+            interpreter.eval(preMapping);
+        }
+
+        for (MappingRule rule : getRules()) {
+            String name = rule.getName();
+            String action = rule.getAction();
+            boolean required = rule.isRequired();
+
+            if (debug) {
+                log.debug(" - Processing mapping rule for "+name);
+                log.debug("   Action: "+action);
+                log.debug("   Required: "+required);
+            }
+
+            Collection<Object> oldValues = attributes.getValues(name);
+            
+            Object oldValue;
+            if (oldValues.size() == 0) {
+                oldValue = null;
+            } else if (oldValues.size() == 1) {
+                oldValue = oldValues.iterator().next();
+            } else {
+                oldValue = oldValues;
+            }
+
+            if (debug) log.debug("   Old value: "+TextUtil.toString(oldValue, 10));
+/*
+            if (!required && oldValue != null) {
+                if (debug) log.debug("   ==> Skipping "+name+": value has been set");
+                continue;
+            }
+
+            String variable = rule.getVariable();
+            if (variable != null) {
+                Object variableValue = interpreter.get(variable);
+                if (variableValue == null) {
+                    if (debug) log.debug("   ==> Skipping "+name+": "+variable+" is undefined");
+                    continue;
+                }
+            }
+*/
+            String condition = rule.getCondition();
+            if (condition != null) {
+                Object conditionValue = interpreter.eval(condition);
+                if (!(conditionValue instanceof Boolean && (Boolean) conditionValue)) {
+                    if (debug) {
+                        //String className = conditionValue == null ? "" : " ("+conditionValue.getClass().getName()+")";
+                        log.debug("   ==> Skipping "+name+": condition is "+ conditionValue);
+                    }
+                    continue;
+                }
+            }
+
+            Object newValue = interpreter.eval(rule);
+            if (debug) log.debug("   New value: "+TextUtil.toString(newValue, 10));
+/*
+            if (newValue == null) {
+                if (debug) log.debug(" - Skipping "+name+": value is null");
+                continue;
+            }
+*/
+            if (MappingRuleConfig.ADD.equals(action)) {
+
+                if (newValue == null) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else if (oldValue == null) {
+                    if (debug) log.debug("   ==> Adding new values");
+                    request.addModification(new Modification(
+                            Modification.ADD,
+                            new Attribute(name, newValue)
+                    ));
+
+                } else if (oldValue.equals(newValue)) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else {
+                    Collection<Object> list = new LinkedHashSet<Object>();
+
+                    if (newValue instanceof Collection) {
+                        list.addAll((Collection<Object>)newValue);
+                    } else {
+                        list.add(newValue);
+                    }
+
+                    if (oldValue instanceof Collection) {
+                        list.removeAll((Collection<Object>)oldValue);
+                    } else {
+                        list.remove(oldValue);
+                    }
+
+                    if (debug) log.debug("   ==> Adding "+list);
+
+                    if (!list.isEmpty()) {
+                        request.addModification(new Modification(
+                                Modification.ADD,
+                                new Attribute(name, list)
+                        ));
+                    }
+                }
+
+            } else if (MappingRuleConfig.REPLACE.equals(action)) {
+
+                if (oldValue == null) {
+                    if (newValue == null) {
+                        if (debug) log.debug("   ==> No change");
+                        // skip
+                    } else {
+                        if (debug) log.debug("   ==> Adding new values");
+                        request.addModification(new Modification(
+                                Modification.ADD,
+                                new Attribute(name, newValue)
+                        ));
+                    }
+
+                } else if (newValue == null) {
+                    if (debug) log.debug("   ==> Deleting all values");
+                    request.addModification(new Modification(
+                            Modification.DELETE,
+                            new Attribute(name)
+                    ));
+
+                } else if (oldValue.equals(newValue)) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else {
+                    Collection<Object> list = new LinkedHashSet<Object>();
+                    if (newValue instanceof Collection) {
+                        list.addAll((Collection<Object>)newValue);
+                    } else {
+                        list.add(newValue);
+                    }
+
+                    if (debug) log.debug("   ==> Replacing "+list);
+
+                    request.addModification(new Modification(
+                            Modification.REPLACE,
+                            new Attribute(name, list)
+                    ));
+                }
+
+            } else if (MappingRuleConfig.DELETE.equals(action)) {
+
+                if (oldValue == null) {
+                    if (debug) log.debug("   ==> No change");
+                    // skip
+
+                } else if (newValue == null) {
+                    if (debug) log.debug("   ==> Deleting all values");
+                    request.addModification(new Modification(
+                            Modification.DELETE,
+                            new Attribute(name)
+                    ));
+
+                } else {
+                    Collection<Object> list = new LinkedHashSet<Object>();
+                    if (newValue instanceof Collection) {
+                        list.addAll((Collection<Object>)newValue);
+                    } else {
+                        list.add(newValue);
+                    }
+
+                    if (debug) log.debug("   ==> Deleting "+list);
+
+                    request.addModification(new Modification(
+                            Modification.DELETE,
+                            new Attribute(name, list)
+                    ));
+                }
+            }
+        }
+
+        String postMapping = mappingConfig.getPostScript();
+        if (postMapping != null) {
+            if (debug) log.debug(" - Executing post-script");
+            interpreter.eval(postMapping);
         }
     }
 

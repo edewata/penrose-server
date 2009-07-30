@@ -6,6 +6,7 @@
         adapter*,
         interpreter*,
         thread-manager?,
+        mapping-file*,
         parameter*
 )>
 
@@ -28,6 +29,8 @@
 <!ELEMENT thread-manager (description?,thread-manager-class?, parameter*)>
 <!ATTLIST thread-manager enabled CDATA #IMPLIED>
 <!ELEMENT thread-manager-class (#PCDATA)>
+
+<!ELEMENT mapping-file (#PCDATA)>
 
 <!ELEMENT parameter (param-name, param-value)>
 <!ELEMENT param-name (#PCDATA)>

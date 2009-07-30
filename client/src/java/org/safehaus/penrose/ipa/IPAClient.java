@@ -54,66 +54,311 @@ public class IPAClient {
     }
 
 
-    public void execute(Collection<String> parameters) throws Exception {
+    public void execute(String partition, Collection<String> parameters) throws Exception {
 
         Iterator<String> iterator = parameters.iterator();
 
         String command = iterator.next();
-        if ("synchronize".equals(command)) {
-            String partition = iterator.next();
-            synchronize(partition);
+        if ("sync".equals(command)) {
+            syncAll(partition);
 
-        } else if ("synchronizeUsers".equals(command)) {
-            String partition = iterator.next();
-            synchronizeUsers(partition);
+        } else if ("sync-users".equals(command)) {
+            syncUsers(partition);
 
-        } else if ("synchronizeGroups".equals(command)) {
-            String partition = iterator.next();
-            synchronizeGroups(partition);
+        } else if ("sync-ipa-users".equals(command)) {
+            syncIPAUsers(partition);
 
-        } else if ("synchronizeHosts".equals(command)) {
-            String partition = iterator.next();
-            synchronizeHosts(partition);
+        } else if ("sync-ipa-user".equals(command)) {
+            String key = iterator.next();
+            syncIPAUser(partition, key);
+
+        } else if ("unlink-ipa-user".equals(command)) {
+            String key = iterator.next();
+            unlinkIPAUser(partition, key);
+
+        } else if ("delete-ipa-user".equals(command)) {
+            String key = iterator.next();
+            deleteIPAUser(partition, key);
+
+        } else if ("sync-samba-users".equals(command)) {
+            syncSambaUsers(partition);
+
+        } else if ("sync-samba-user".equals(command)) {
+            String key = iterator.next();
+            syncSambaUser(partition, key);
+
+        } else if ("unlink-samba-user".equals(command)) {
+            String key = iterator.next();
+            unlinkSambaUser(partition, key);
+
+        } else if ("delete-samba-user".equals(command)) {
+            String key = iterator.next();
+            deleteSambaUser(partition, key);
+
+        } else if ("sync-groups".equals(command)) {
+            syncGroups(partition);
+
+        } else if ("sync-ipa-groups".equals(command)) {
+            syncIPAGroups(partition);
+
+        } else if ("sync-ipa-group".equals(command)) {
+            String key = iterator.next();
+            syncIPAGroup(partition, key);
+
+        } else if ("unlink-ipa-group".equals(command)) {
+            String key = iterator.next();
+            unlinkIPAGroup(partition, key);
+
+        } else if ("delete-ipa-group".equals(command)) {
+            String key = iterator.next();
+            deleteIPAGroup(partition, key);
+
+        } else if ("sync-samba-groups".equals(command)) {
+            syncSambaGroups(partition);
+
+        } else if ("sync-samba-group".equals(command)) {
+            String key = iterator.next();
+            syncSambaGroup(partition, key);
+
+        } else if ("unlink-samba-group".equals(command)) {
+            String key = iterator.next();
+            unlinkSambaGroup(partition, key);
+
+        } else if ("delete-samba-group".equals(command)) {
+            String key = iterator.next();
+            deleteSambaGroup(partition, key);
+
+        } else if ("sync-hosts".equals(command)) {
+            syncHosts(partition);
 
         } else {
             throw new Exception("Unknown command: "+command);
         }
     }
 
-    public void synchronize(String partitionName) throws Exception {
-        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
-        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partitionName);
-        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
-        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPAModule");
-
-        moduleClient.invoke("synchronize");
+    public void syncAll(String partition) throws Exception {
+        syncUsers(partition);
+        syncGroups(partition);
+        syncHosts(partition);
     }
 
-    public void synchronizeUsers(String partitionName) throws Exception {
+    public void syncUsers(String partition) throws Exception {
         PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
-        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partitionName);
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
         ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
         ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPAUserModule");
 
-        moduleClient.invoke("synchronize");
+        moduleClient.invoke("syncUsers");
     }
 
-    public void synchronizeGroups(String partitionName) throws Exception {
+    public void syncIPAUsers(String partition) throws Exception {
         PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
-        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partitionName);
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaUserModule");
+
+        moduleClient.invoke("syncUsers");
+    }
+
+    public void syncIPAUser(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaUserModule");
+
+        moduleClient.invoke(
+                "syncUser",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void unlinkIPAUser(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaUserModule");
+
+        moduleClient.invoke(
+                "unlinkUser",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void deleteIPAUser(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaUserModule");
+
+        moduleClient.invoke(
+                "deleteUser",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void syncSambaUsers(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAUserModule");
+
+        moduleClient.invoke("syncUsers");
+    }
+
+    public void syncSambaUser(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAUserModule");
+
+        moduleClient.invoke(
+                "syncUser",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void unlinkSambaUser(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAUserModule");
+
+        moduleClient.invoke(
+                "unlinkUser",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void deleteSambaUser(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAUserModule");
+
+        moduleClient.invoke(
+                "deleteUser",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void syncGroups(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
         ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
         ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPAGroupModule");
 
-        moduleClient.invoke("synchronize");
+        moduleClient.invoke("syncGroups");
     }
 
-    public void synchronizeHosts(String partitionName) throws Exception {
+    public void syncIPAGroups(String partition) throws Exception {
         PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
-        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partitionName);
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaGroupModule");
+
+        moduleClient.invoke("syncGroups");
+    }
+
+    public void syncIPAGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaGroupModule");
+
+        moduleClient.invoke(
+                "syncGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void unlinkIPAGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaGroupModule");
+
+        moduleClient.invoke(
+                "unlinkGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void deleteIPAGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaGroupModule");
+
+        moduleClient.invoke(
+                "deleteGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void syncSambaGroups(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAGroupModule");
+
+        moduleClient.invoke("syncGroups");
+    }
+
+    public void syncSambaGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAGroupModule");
+
+        moduleClient.invoke(
+                "syncGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void unlinkSambaGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAGroupModule");
+
+        moduleClient.invoke(
+                "unlinkGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void deleteSambaGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAGroupModule");
+
+        moduleClient.invoke(
+                "deleteGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
+    public void syncHosts(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
         ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
         ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPAModule");
 
-        moduleClient.invoke("synchronizeHosts");
+        moduleClient.invoke("syncHosts");
     }
 
     public static void showUsage() {
@@ -130,8 +375,28 @@ public class IPAClient {
         System.out.println("  -v                 run in verbose mode");
         System.out.println();
         System.out.println("Commands:");
-        System.out.println("  list <partition>               List locked accounts.");
-        System.out.println("  reset <partition> <account>    Reset account lockout.");
+        System.out.println("  sync                      Sync all.");
+        System.out.println("  sync-users                Sync all users.");
+        System.out.println("  sync-ipa-users            Sync all IPA users.");
+        System.out.println("  sync-ipa-user <key>       Sync IPA user.");
+        System.out.println("  unlink-ipa-user <key>     Unlink IPA user.");
+        System.out.println("  delete-ipa-user <key>     Delete IPA user.");
+        System.out.println("  sync-samba-users          Sync all Samba users.");
+        System.out.println("  sync-samba-user <key>     Sync Samba user.");
+        System.out.println("  unlink-samba-user <key>   Unlink Samba user.");
+        System.out.println("  delete-samba-user <key>   Delete Samba user.");
+        System.out.println("  sync-groups               Sync all groups.");
+        System.out.println("  sync-ipa-groups           Sync all IPA groups.");
+        System.out.println("  sync-ipa-group <key>      Sync IPA group.");
+        System.out.println("  unlink-ipa-group <key>    Unlink IPA group.");
+        System.out.println("  delete-ipa-group <key>    Delete IPA group.");
+        System.out.println("  sync-samba-groups         Sync all Samba group.");
+        System.out.println("  sync-samba-group <key>    Sync Samba group.");
+        System.out.println("  unlink-samba-group <key>  Unlink Samba group.");
+        System.out.println("  delete-samba-group <key>  Delete Samba group.");
+        System.out.println("  sync-hosts                Sync hosts.");
+        System.out.println("  sync-ipa-host <key>       Sync IPA host.");
+        System.out.println("  sync-samba-host <key>     Sync Samba host.");
     }
 
     public static void main(String args[]) throws Exception {
@@ -238,7 +503,8 @@ public class IPAClient {
             client.setRmiTransportPort(rmiTransportPort);
             client.connect();
 
-            client.execute(parameters);
+            String partition = System.getProperty("partition.name");
+            client.execute(partition, parameters);
 
             client.close();
 

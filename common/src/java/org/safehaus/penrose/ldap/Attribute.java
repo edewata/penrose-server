@@ -25,14 +25,24 @@ public class Attribute implements Serializable, Cloneable {
 
     public Attribute(String name, Object value) {
         this.name = name;
-        this.values.add(value);
+        if (value == null) return;
+
+        if (value instanceof Collection) {
+            Collection<Object> values = (Collection<Object>)value;
+            for (Object v : values) {
+                if (!containsValue(v)) this.values.add(v);
+            }
+            
+        } else {
+            this.values.add(value);
+        }
     }
 
     public Attribute(String name, Collection<Object> values) {
         this.name = name;
         if (values == null) return;
-        for (Object value : values) {
-            if (!containsValue(value)) this.values.add(value);
+        for (Object v : values) {
+            if (!containsValue(v)) this.values.add(v);
         }
     }
 

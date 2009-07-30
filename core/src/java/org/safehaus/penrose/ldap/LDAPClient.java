@@ -705,7 +705,7 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
 
                     try {
                         LDAPEntry entry = rs.next();
-                        if (debug) log.debug("Entry: ["+entry.getDN()+"]");
+                        //if (debug) log.debug("Entry: ["+entry.getDN()+"]");
 
                         SearchResult result = createSearchResult(entry);
                         response.add(result);
@@ -829,19 +829,19 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
 
             if (binaryAttributes.contains(name.toLowerCase())) {
                 for (byte[] value : ldapAttribute.getByteValueArray()) {
-                    if (debug) log.debug(" - " + name + ": " + BinaryUtil.encode(BinaryUtil.BIG_INTEGER, value, 0, 10)+"...");
+                    //if (debug) log.debug(" - " + name + ": " + BinaryUtil.encode(BinaryUtil.BIG_INTEGER, value, 0, 10)+"...");
                     attribute.addValue(value);
                 }
 
             } else {
                 for (String value : ldapAttribute.getStringValueArray()) {
-                    if (debug) log.debug(" - " + name + ": " + value);
+                    //if (debug) log.debug(" - " + name + ": " + value);
                     attribute.addValue(value);
                 }
             }
 
             if (attribute.isEmpty()) {
-                if (debug) log.debug(" - " + name);
+                //if (debug) log.debug(" - " + name);
             }
             
             attributes.add(attribute);

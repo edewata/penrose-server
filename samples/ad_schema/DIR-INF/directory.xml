@@ -27,7 +27,7 @@
   </entry>
 
   <entry dn="cn=LDAP Style,dc=AD Schema,dc=Example,dc=com">
-    <entry-class>org.safehaus.penrose.activeDirectory.directory.ADSchemaEntry</entry-class>
+    <entry-class>org.safehaus.penrose.ad.directory.ADSchemaEntry</entry-class>
     <oc>subentry</oc>
     <oc>subschema</oc>
     <oc>extensibleObject</oc>
