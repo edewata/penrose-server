@@ -4,9 +4,14 @@ import org.safehaus.penrose.ldap.*;
 import org.safehaus.penrose.ldap.connection.LDAPConnection;
 import org.safehaus.penrose.ldap.source.LDAPSource;
 import org.safehaus.penrose.util.TextUtil;
+import org.safehaus.penrose.filter.*;
 import org.safehaus.penrose.source.SourceManager;
 import org.safehaus.penrose.module.Module;
 import org.safehaus.penrose.session.Session;
+import org.safehaus.penrose.mapping.MappingManager;
+import org.safehaus.penrose.mapping.Mapping;
+import org.safehaus.penrose.interpreter.Interpreter;
+import org.ietf.ldap.LDAPException;
 
 import java.util.*;
 
@@ -18,20 +23,50 @@ public class IPAUserModule extends Module {
     LDAPSource source;
     LDAPConnection sourceConnection;
 
+    String sourceKeyAttribute;
+    String sourceLinkAttribute;
+
     LDAPSource sourceUsers;
+
+    Mapping importSourceUserMapping;
+    Mapping importSourceUserMapping2;
+
+    Mapping linkSourceUserMapping;
+    Mapping linkSourceUserMapping2;
+
+    Mapping syncSourceUserMapping;
+    Mapping syncSourceUserMapping2;
+
+    Mapping unlinkSourceUserMapping;
+    Mapping unlinkSourceUserMapping2;
 
     LDAPSource target;
     LDAPConnection targetConnection;
 
+    String targetKeyAttribute;
+    String targetLinkAttribute;
+
     LDAPSource targetUsers;
 
-    Session session;
-    LDAPClient client;
+    Mapping importTargetUserMapping;
+    Mapping importTargetUserMapping2;
+
+    Mapping linkTargetUserMapping;
+    Mapping linkTargetUserMapping2;
+
+    Mapping syncTargetUserMapping;
+    Mapping syncTargetUserMapping2;
 
     String sourceDomain;
 
-    Map<String,String> sourceSharedAttributes = new LinkedHashMap<String,String>();
-    Map<String,String> targetSharedAttributes = new LinkedHashMap<String,String>();
+    Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
+    Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
+
+    Map<String,DN> targetDns = new LinkedHashMap<String,DN>();
+    Map<String,String> targetDnMapping = new LinkedHashMap<String,String>();
+
+    Set<String> ignoredSourceDns = new HashSet<String>();
+    Set<String> ignoredTargetDns = new HashSet<String>();
 
     public IPAUserModule() {
     }
@@ -43,6 +78,7 @@ public class IPAUserModule extends Module {
         log.debug(TextUtil.displaySeparator(60));
 
         SourceManager sourceManager = partition.getSourceManager();
+        MappingManager mappingManager = partition.getMappingManager();
 
         String sourceName = getParameter("source");
         source = (LDAPSource)sourceManager.getSource(sourceName);
@@ -51,6 +87,33 @@ public class IPAUserModule extends Module {
         String sourceUsersName = getParameter("sourceUsers");
         sourceUsers = (LDAPSource)sourceManager.getSource(sourceUsersName);
 
+        sourceKeyAttribute = getParameter("sourceKeyAttribute");
+        sourceLinkAttribute = getParameter("sourceLinkAttribute");
+
+        String importSourceUserMappingName = getParameter("importSourceUserMapping");
+        importSourceUserMapping = mappingManager.getMapping(importSourceUserMappingName);
+
+        String importSourceUserMapping2Name = getParameter("importSourceUserMapping2");
+        importSourceUserMapping2 = mappingManager.getMapping(importSourceUserMapping2Name);
+
+        String linkSourceUserMappingName = getParameter("linkSourceUserMapping");
+        linkSourceUserMapping = mappingManager.getMapping(linkSourceUserMappingName);
+
+        String linkSourceUserMapping2Name = getParameter("linkSourceUserMapping2");
+        linkSourceUserMapping2 = mappingManager.getMapping(linkSourceUserMapping2Name);
+
+        String syncSourceUserMappingName = getParameter("syncSourceUserMapping");
+        syncSourceUserMapping = mappingManager.getMapping(syncSourceUserMappingName);
+
+        String syncSourceUserMapping2Name = getParameter("syncSourceUserMapping2");
+        syncSourceUserMapping2 = mappingManager.getMapping(syncSourceUserMapping2Name);
+
+        String unlinkSourceUserMappingName = getParameter("unlinkSourceUserMapping");
+        unlinkSourceUserMapping = mappingManager.getMapping(unlinkSourceUserMappingName);
+
+        String unlinkSourceUserMapping2Name = getParameter("unlinkSourceUserMapping2");
+        unlinkSourceUserMapping2 = mappingManager.getMapping(unlinkSourceUserMapping2Name);
+
         String targetName = getParameter("target");
         target = (LDAPSource)sourceManager.getSource(targetName);
         targetConnection = (LDAPConnection)target.getConnection();
@@ -58,8 +121,26 @@ public class IPAUserModule extends Module {
         String targetUsersName = getParameter("targetUsers");
         targetUsers = (LDAPSource)sourceManager.getSource(targetUsersName);
 
-        session = createAdminSession();
-        client = sourceConnection.getClient(session);
+        targetKeyAttribute = getParameter("targetKeyAttribute");
+        targetLinkAttribute = getParameter("targetLinkAttribute");
+
+        String importTargetUserMappingName = getParameter("importTargetUserMapping");
+        importTargetUserMapping = mappingManager.getMapping(importTargetUserMappingName);
+
+        String importTargetUserMapping2Name = getParameter("importTargetUserMapping2");
+        importTargetUserMapping2 = mappingManager.getMapping(importTargetUserMapping2Name);
+
+        String linkTargetUserMappingName = getParameter("linkTargetUserMapping");
+        linkTargetUserMapping = mappingManager.getMapping(linkTargetUserMappingName);
+
+        String linkTargetUserMapping2Name = getParameter("linkTargetUserMapping2");
+        linkTargetUserMapping2 = mappingManager.getMapping(linkTargetUserMapping2Name);
+
+        String syncTargetUserMappingName = getParameter("syncTargetUserMapping");
+        syncTargetUserMapping = mappingManager.getMapping(syncTargetUserMappingName);
+
+        String syncTargetUserMapping2Name = getParameter("syncTargetUserMapping2");
+        syncTargetUserMapping2 = mappingManager.getMapping(syncTargetUserMapping2Name);
 
         StringBuilder sb = new StringBuilder();
         for (RDN rdn : source.getBaseDn().getRdns()) {
@@ -69,27 +150,89 @@ public class IPAUserModule extends Module {
             sb.append(rdn.getValue());
         }
         sourceDomain = sb.toString();
+/*
+        DN sourceAdminDn = new DN("uid=admin,cn=users,cn=accounts").append(source.getBaseDn());
+        DN targetAdminDn = new DN("CN=Administrator,CN=Users").append(target.getBaseDn());
 
-        //targetSharedAttributes.put("cn", "cn");
-        //targetSharedAttributes.put("sn", "sn");
+        sourceDns.put(sourceAdminDn.getNormalizedDn(), sourceAdminDn);
+        sourceDnMapping.put(sourceAdminDn.getNormalizedDn(), targetAdminDn.getNormalizedDn());
 
-        targetSharedAttributes.put("objectGUID", "ntUniqueId");
-        targetSharedAttributes.put("objectSid", "ntSid");
-        //targetSharedAttributes.put("accountExpires", "krbPasswordExpiration");
+        targetDns.put(targetAdminDn.getNormalizedDn(), targetAdminDn);
+        targetDnMapping.put(targetAdminDn.getNormalizedDn(), sourceAdminDn.getNormalizedDn());
+*/
+        DN targetSyncDn = new DN("CN=Sync,CN=Users").append(target.getBaseDn());
+        ignoredTargetDns.add(targetSyncDn.getNormalizedDn());
     }
 
     public void destroy() throws Exception {
-        log.debug("Closing session.");
-        session.close();
     }
 
-    public void synchronize() throws Exception {
-        Session session = null;
+    public void syncUsers() throws Exception {
+        final Session session = createAdminSession();
 
         try {
-            session = createAdminSession();
+            SearchRequest sourceRequest = new SearchRequest();
 
-            synchronize(session);
+            SearchResponse sourceResponse = new SearchResponse() {
+                public void add(SearchResult sourceEntry) throws Exception {
+
+                    DN sourceDn = sourceEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+sourceDn);
+
+                    if (ignoredSourceDns.contains(sourceDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+sourceDn);
+                        return;
+                    }
+
+                    SearchResult targetEntry = findTargetUser(session, sourceEntry);
+
+                    if (targetEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
+                        importSourceUser(session, sourceEntry);
+
+                    } else {
+                        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+
+                        if (linkAttribute == null) {
+                            if (log.isInfoEnabled()) log.info("Linking "+sourceEntry.getDn());
+                            linkSourceUser(session, sourceEntry, targetEntry);
+
+                        } else {
+                            if (log.isInfoEnabled()) log.info("Syncing "+sourceEntry.getDn());
+                            syncSourceUser(session, sourceEntry, targetEntry);
+                        }
+                    }
+                }
+            };
+
+            sourceUsers.search(session, sourceRequest, sourceResponse);
+
+            SearchRequest targetRequest = new SearchRequest();
+
+            SearchResponse targetResponse = new SearchResponse() {
+                public void add(SearchResult targetEntry) throws Exception {
+
+                    DN targetDn = targetEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+targetDn);
+
+                    if (ignoredTargetDns.contains(targetDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+targetDn);
+                        return;
+                    }
+
+                    SearchResult sourceEntry = findSourceUser(session, targetEntry);
+
+                    if (sourceEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+targetDn);
+                        importTargetUser(session, targetEntry);
+
+                    } else {
+                        if (log.isInfoEnabled()) log.info("Skipping "+targetDn);
+                    }
+                }
+            };
+
+            targetUsers.search(session, targetRequest, targetResponse);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -100,85 +243,665 @@ public class IPAUserModule extends Module {
         }
     }
 
-    public void synchronize(Session session) throws Exception {
+    public void syncSourceUsers() throws Exception {
+        final Session session = createAdminSession();
 
-        log.info("Synchronizing Users:");
+        try {
+            SearchRequest sourceRequest = new SearchRequest();
 
-        final Map<String,SearchResult> sourceMap = new TreeMap<String,SearchResult>();
-        final Map<String,SearchResult> targetMap = new TreeMap<String,SearchResult>();
+            SearchResponse sourceResponse = new SearchResponse() {
+                public void add(SearchResult sourceEntry) throws Exception {
 
-        SearchRequest sourceRequest = new SearchRequest();
+                    DN sourceDn = sourceEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+sourceDn);
 
-        SearchResponse sourceResponse = new SearchResponse() {
-            public void add(SearchResult result) throws Exception {
-                DN dn = result.getDn();
-                RDN rdn = dn.getRdn();
-                String uid = (String)rdn.get("uid");
-                sourceMap.put(uid, result);
-            }
-        };
+                    if (ignoredSourceDns.contains(sourceDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+sourceDn);
+                        return;
+                    }
 
-        sourceUsers.search(session, sourceRequest, sourceResponse);
+                    SearchResult targetEntry = findTargetUser(session, sourceEntry);
 
-        SearchRequest targetRequest = new SearchRequest();
+                    if (targetEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
+                        importSourceUser(session, sourceEntry);
 
-        SearchResponse targetResponse = new SearchResponse() {
-            public void add(SearchResult result) throws Exception {
-                Attribute attribute = result.getAttribute("sAMAccountName");
-                if (attribute == null) return;
+                    } else {
+                        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
 
-                String sAMAccountName = (String)attribute.getValue();
-                targetMap.put(sAMAccountName, result);
-            }
-        };
+                        if (linkAttribute == null) {
+                            if (log.isInfoEnabled()) log.info("Linking "+sourceEntry.getDn());
+                            linkSourceUser(session, sourceEntry, targetEntry);
 
-        targetUsers.search(session, targetRequest, targetResponse);
+                        } else {
+                            if (log.isInfoEnabled()) log.info("Syncing "+sourceEntry.getDn());
+                            syncSourceUser(session, sourceEntry, targetEntry);
+                        }
+                    }
+                }
+            };
 
-        Set<String> newSourceKeys = new TreeSet<String>();
-        newSourceKeys.addAll(targetMap.keySet());
-        newSourceKeys.removeAll(sourceMap.keySet());
-        log.info("Adding source: "+newSourceKeys);
+            sourceUsers.search(session, sourceRequest, sourceResponse);
 
-        Set<String> updateTargetKeys = new TreeSet<String>();
-        updateTargetKeys.addAll(targetMap.keySet());
-        updateTargetKeys.retainAll(sourceMap.keySet());
-        log.info("Updating target: "+updateTargetKeys);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
 
-        Set<String> newTargetKeys = new TreeSet<String>();
-        newTargetKeys.addAll(sourceMap.keySet());
-        newTargetKeys.removeAll(targetMap.keySet());
-        log.info("Adding target: "+newTargetKeys);
-
-        for (String key  : newSourceKeys) {
-
-            if (key.equals("Administrator")) continue;
-
-            SearchResult result = targetMap.get(key);
-            addSourceUser(session, result.getDn(), result.getAttributes());
-        }
-
-        for (String key  : updateTargetKeys) {
-
-            SearchResult result = sourceMap.get(key);
-            updateTargetUser(session, result.getDn(), result.getAttributes());
-        }
-
-        for (String key  : newTargetKeys) {
-
-            SearchResult result = sourceMap.get(key);
-
-            if (key.equals("admin")) {
-                updateTargetUser(session, result.getDn(), result.getAttributes());
-            } else {
-                addTargetUser(session, result.getDn(), result.getAttributes());
-            }
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
         }
     }
 
-    public void addSourceUser(Session session, DN targetDn, Attributes targetAttributes) throws Exception {
+    public void syncTargetUsers() throws Exception {
+        final Session session = createAdminSession();
+
+        try {
+            SearchRequest targetRequest = new SearchRequest();
+
+            SearchResponse targetResponse = new SearchResponse() {
+                public void add(SearchResult targetEntry) throws Exception {
+
+                    DN targetDn = targetEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+targetDn);
+
+                    if (ignoredTargetDns.contains(targetDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+targetDn);
+                        return;
+                    }
+
+                    SearchResult sourceEntry = findSourceUser(session, targetEntry);
+
+                    if (sourceEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+targetDn);
+                        importTargetUser(session, targetEntry);
+
+                    } else {
+                        Attribute linkAttribute = targetEntry.getAttribute(targetLinkAttribute);
+
+                        if (linkAttribute == null) {
+                            if (log.isInfoEnabled()) log.info("Linking "+targetEntry.getDn());
+                            linkTargetUser(session, targetEntry, sourceEntry);
+
+                        } else {
+                            if (log.isInfoEnabled()) log.info("Syncing "+targetEntry.getDn());
+                            syncTargetUser(session, targetEntry, sourceEntry);
+                        }
+                    }
+                }
+            };
+
+            targetUsers.search(session, targetRequest, targetResponse);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void syncSourceUser(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            Filter filter = new SimpleFilter(sourceKeyAttribute, "=", key);
+
+            if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+            SearchRequest sourceRequest = new SearchRequest();
+            sourceRequest.setFilter(filter);
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceUsers.search(session, sourceRequest, sourceResponse);
+
+            if (!sourceResponse.hasNext()) {
+                if (log.isInfoEnabled()) log.info("Entry not found.");
+                throw new Exception("Entry not found.");
+            }
+
+            SearchResult sourceEntry = sourceResponse.next();
+            if (log.isInfoEnabled()) log.info("Synchronizing "+sourceEntry.getDn());
+
+            SearchResult targetEntry = findTargetUser(session, sourceEntry);
+
+            if (targetEntry == null) {
+                if (log.isInfoEnabled()) log.info("Adding "+sourceEntry.getDn());
+                importSourceUser(session, sourceEntry);
+
+            } else {
+                Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+
+                if (linkAttribute == null) {
+                    if (log.isInfoEnabled()) log.info("Linking "+sourceEntry.getDn());
+                    linkSourceUser(session, sourceEntry, targetEntry);
+                    
+                } else {
+                    if (log.isInfoEnabled()) log.info("Syncing "+sourceEntry.getDn());
+                    syncSourceUser(session, sourceEntry, targetEntry);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void syncTargetUser(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            Filter filter = new SimpleFilter(targetKeyAttribute, "=", key);
+
+            if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+            SearchRequest targetRequest = new SearchRequest();
+            targetRequest.setFilter(filter);
+
+            SearchResponse targetResponse = new SearchResponse();
+
+            targetUsers.search(session, targetRequest, targetResponse);
+
+            if (!targetResponse.hasNext()) {
+                if (log.isInfoEnabled()) log.info("Entry not found.");
+                throw new Exception("Entry not found.");
+            }
+
+            SearchResult targetEntry = targetResponse.next();
+            if (log.isInfoEnabled()) log.info("Synchronizing "+targetEntry.getDn());
+
+            SearchResult sourceEntry = findSourceUser(session, targetEntry);
+
+            if (sourceEntry == null) {
+                if (log.isInfoEnabled()) log.info("Adding "+targetEntry.getDn());
+                importTargetUser(session, targetEntry);
+
+            } else {
+                Attribute linkAttribute = sourceEntry.getAttribute(targetLinkAttribute);
+
+                if (linkAttribute == null) {
+                    if (log.isInfoEnabled()) log.info("Linking "+targetEntry.getDn());
+                    linkTargetUser(session, targetEntry, sourceEntry);
+
+                } else {
+                    if (log.isInfoEnabled()) log.info("Syncing "+targetEntry.getDn());
+                    syncTargetUser(session, targetEntry, sourceEntry);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void unlinkSourceUser(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            Filter filter = new SimpleFilter(sourceKeyAttribute, "=", key);
+
+            if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+            SearchRequest sourceRequest = new SearchRequest();
+            sourceRequest.setFilter(filter);
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceUsers.search(session, sourceRequest, sourceResponse);
+
+            if (!sourceResponse.hasNext()) {
+                if (log.isInfoEnabled()) log.info("Entry not found.");
+                throw new Exception("Entry not found.");
+            }
+
+            SearchResult sourceEntry = sourceResponse.next();
+            if (log.isInfoEnabled()) log.info("Unlinking "+sourceEntry.getDn());
+
+            Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+
+            if (linkAttribute == null) {
+                if (log.isInfoEnabled()) log.info("Entry not linked.");
+
+            } else {
+                SearchResult targetEntry = findTargetUser(session, sourceEntry);
+                if (log.isInfoEnabled()) log.info("Unlinking "+(targetEntry == null ? null : targetEntry.getDn()));
+                unlinkSourceUser(session, sourceEntry, targetEntry);
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public SearchResult findSourceUser(Session session, SearchResult targetEntry) throws Exception {
+
+        SearchResult sourceEntry = null;
+
+        Attribute linkAttribute = targetEntry.getAttribute(targetLinkAttribute);
+        if (linkAttribute != null) {
+
+            Object link = linkAttribute.getValue();
+            Filter filter = new SimpleFilter(sourceLinkAttribute, "=", link);
+
+            if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+            SearchRequest sourceRequest = new SearchRequest();
+            sourceRequest.setFilter(filter);
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceUsers.search(session, sourceRequest, sourceResponse);
+
+            if (sourceResponse.hasNext()) {
+                sourceEntry = sourceResponse.next();
+                if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+            }
+        }
+
+        if (sourceEntry == null) {
+            String normalizedTargetDn = targetEntry.getDn().getNormalizedDn();
+            String normalizedSourceDn = targetDnMapping.get(normalizedTargetDn);
+
+            if (normalizedSourceDn != null) {
+                DN sourceDn = sourceDns.get(normalizedSourceDn);
+
+                if (log.isInfoEnabled()) log.info("Searching source using static mapping: "+sourceDn);
+
+                SearchRequest sourceRequest = new SearchRequest();
+                sourceRequest.setDn(sourceDn);
+                sourceRequest.setScope(SearchRequest.SCOPE_BASE);
+
+                SearchResponse sourceResponse = new SearchResponse();
+
+                source.search(session, sourceRequest, sourceResponse);
+
+                if (sourceResponse.hasNext()) {
+                    sourceEntry = sourceResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+                }
+            }
+        }
+
+        if (sourceEntry == null) {
+
+            Attribute keyAttribute = targetEntry.getAttribute(targetKeyAttribute);
+            if (keyAttribute != null) {
+
+                String key = (String)keyAttribute.getValue();
+                Filter filter =new SimpleFilter(sourceKeyAttribute, "=", key);
+
+                if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+                SearchRequest sourceRequest = new SearchRequest();
+                sourceRequest.setFilter(filter);
+
+                SearchResponse sourceResponse = new SearchResponse();
+
+                sourceUsers.search(session, sourceRequest, sourceResponse);
+
+                if (sourceResponse.hasNext()) {
+                    sourceEntry = sourceResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+                }
+            }
+        }
+
+        return sourceEntry;
+    }
+
+    public SearchResult findTargetUser(Session session, SearchResult sourceEntry) throws Exception {
+
+        SearchResult targetEntry = null;
+
+        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+        if (linkAttribute != null) {
+
+            Object link = linkAttribute.getValue();
+            Filter filter = new SimpleFilter(targetLinkAttribute, "=", link);
+
+            if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+            SearchRequest targetRequest = new SearchRequest();
+            targetRequest.setFilter(filter);
+
+            SearchResponse targetResponse = new SearchResponse();
+
+            targetUsers.search(session, targetRequest, targetResponse);
+
+            if (targetResponse.hasNext()) {
+                targetEntry = targetResponse.next();
+                if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+            }
+        }
+
+        if (targetEntry == null) {
+
+            String normalizedSourceDn = sourceEntry.getDn().getNormalizedDn();
+            String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
+
+            if (normalizedTargetDn != null) {
+                DN targetDn = targetDns.get(normalizedTargetDn);
+
+                if (log.isInfoEnabled()) log.info("Searching target using static mapping: "+targetDn);
+
+                SearchRequest targetRequest = new SearchRequest();
+                targetRequest.setDn(targetDn);
+                targetRequest.setScope(SearchRequest.SCOPE_BASE);
+
+                SearchResponse targetResponse = new SearchResponse();
+
+                target.search(session, targetRequest, targetResponse);
+
+                if (targetResponse.hasNext()) {
+                    targetEntry = targetResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+                }
+            }
+        }
+
+        if (targetEntry == null) {
+
+            Attribute keyAttribute = sourceEntry.getAttribute(sourceKeyAttribute);
+            if (keyAttribute != null) {
+
+                String key = (String)keyAttribute.getValue();
+                Filter filter = new SimpleFilter(targetKeyAttribute, "=", key);
+
+                if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+                SearchRequest targetRequest = new SearchRequest();
+                targetRequest.setFilter(filter);
+
+                SearchResponse targetResponse = new SearchResponse();
+
+                targetUsers.search(session, targetRequest, targetResponse);
+
+                if (targetResponse.hasNext()) {
+                    targetEntry = targetResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+                }
+            }
+        }
+
+        return targetEntry;
+    }
+
+    public void importSourceUser(Session session, SearchResult sourceEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        String normalizedSourceDn = sourceDn.getNormalizedDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
 
         log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("ADD SOURCE USER", 60));
+        log.debug(TextUtil.displayLine("IMPORT SOURCE USER", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        sourceAttributes.print();
+
+        log.debug("");
+
+        Attributes targetAttributes = new Attributes();
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("ipa", sourceAttributes);
+
+        importSourceUserMapping.map(interpreter, targetAttributes);
+
+        String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
+        DN targetDn = targetDns.get(normalizedTargetDn);
+
+        Attribute dnAttribute = targetAttributes.remove("dn");
+        if (targetDn == null) {
+            targetDn = new DN((String)dnAttribute.getValue());
+        }
+
+        RDN rdn = targetDn.getRdn();
+        String rdnAttribute = rdn.getName();
+        Object rdnValue = rdn.getValue();
+        
+        int counter = 0;
+        boolean done = false;
+
+        while (!done) {
+            AddRequest addRequest = new AddRequest();
+            addRequest.setDn(targetDn);
+            addRequest.setAttributes(targetAttributes);
+
+            AddResponse addResponse = new AddResponse();
+
+            try {
+                target.add(session, addRequest, addResponse);
+                done = true;
+                
+            } catch (LDAPException e) {
+                log.error("Error: "+e.getMessage());
+
+                if (e.getResultCode() == LDAP.ENTRY_ALREADY_EXISTS) {
+
+                    ++counter;
+                    Object newValue = rdnValue.toString()+" "+counter;
+
+                    RDNBuilder rb = new RDNBuilder();
+                    rb.set(rdnAttribute, newValue);
+                    rdn = rb.toRdn();
+
+                    targetDn = rdn.append(targetDn.getParentDn());
+                    targetAttributes.setValue(rdnAttribute, newValue);
+                    log.debug("New target DN: "+targetDn);
+
+                } else {
+                    done = true;
+                }
+            }
+        }
+
+        if (importSourceUserMapping2 == null) return;
+
+        SearchResult targetResult = target.find(session, targetDn);
+        targetAttributes = targetResult.getAttributes();
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("samba", targetAttributes);
+
+        importSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse modifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, modifyResponse);
+        }
+    }
+
+    public void linkSourceUser(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("LINK SOURCE USER", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("ipa", sourceAttributes);
+
+        linkSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse targetModifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, targetModifyResponse);
+        }
+
+        if (linkSourceUserMapping2 == null) return;
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("samba", targetAttributes);
+
+        linkSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+    }
+
+    public void unlinkSourceUser(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("UNLINK SOURCE USER", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN targetDn = null;
+        Attributes targetAttributes = null;
+
+        if (targetEntry != null) {
+            targetDn = targetEntry.getDn();
+            targetAttributes = targetEntry.getAttributes();
+
+            ModifyRequest targetModifyRequest = new ModifyRequest();
+            targetModifyRequest.setDn(targetDn);
+
+            Interpreter interpreter = partition.newInterpreter();
+            interpreter.set("session", session);
+            interpreter.set("module", this);
+            interpreter.set("ipa", sourceAttributes);
+
+            unlinkSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+
+            if (!targetModifyRequest.isEmpty()) {
+                ModifyResponse targetModifyResponse = new ModifyResponse();
+
+                target.modify(session, targetModifyRequest, targetModifyResponse);
+            }
+        }
+
+        if (unlinkSourceUserMapping2 == null) return;
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        if (targetEntry != null) interpreter.set("samba", targetAttributes);
+
+        unlinkSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+    }
+
+    public void syncSourceUser(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("SYNC SOURCE USER", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("ipa", sourceAttributes);
+
+        syncSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse targetModifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, targetModifyResponse);
+        }
+
+        if (syncSourceUserMapping2 == null) return;
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("samba", targetAttributes);
+
+        syncSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+    }
+
+    public void importTargetUser(Session session, SearchResult targetEntry) throws Exception {
+
+        DN targetDn = targetEntry.getDn();
+        String normalizedTargetDn = targetDn.getNormalizedDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("IMPORT TARGET USER", 60));
         log.debug(TextUtil.displayLine(" - "+targetDn, 60));
         log.debug(TextUtil.displaySeparator(60));
 
@@ -186,44 +909,21 @@ public class IPAUserModule extends Module {
 
         log.debug("");
 
-        RDNBuilder rb = new RDNBuilder();
-        rb.set("uid", targetAttributes.getValue("sAMAccountName"));
-        RDN rdn = rb.toRdn();
-
-        DN sourceDn = rdn.append("cn=users,cn=accounts").append(source.getBaseDn());
-
         Attributes sourceAttributes = new Attributes();
-        sourceAttributes.addValue("objectClass", "inetOrgPerson");
-        sourceAttributes.addValue("objectClass", "inetUser");
-        sourceAttributes.addValue("objectClass", "krbPrincipalAux");
-        sourceAttributes.addValue("objectClass", "organizationalPerson");
-        sourceAttributes.addValue("objectClass", "person");
-        sourceAttributes.addValue("objectClass", "posixAccount");
-        sourceAttributes.addValue("objectClass", "radiusProfile");
-        sourceAttributes.addValue("objectClass", "extensibleObject");
 
-        String cn = (String)targetAttributes.getValue("cn");
-        sourceAttributes.setValue("cn", cn);
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("samba", targetAttributes);
 
-        String sn = (String)targetAttributes.getValue("sn");
-        sourceAttributes.setValue("sn", sn == null ? cn : sn);
+        importTargetUserMapping.map(interpreter, sourceAttributes);
 
-        String uid = (String)targetAttributes.getValue("sAMAccountName");
-        sourceAttributes.setValue("uid", uid);
+        String normalizedSourceDn = targetDnMapping.get(normalizedTargetDn);
+        DN sourceDn = targetDns.get(normalizedSourceDn);
 
-        String homeDirectory = "/home/"+uid;
-        sourceAttributes.setValue("homeDirectory", homeDirectory);
-
-        sourceAttributes.setValue("gidNumber", "0");
-
-        sourceAttributes.setValue("krbPrincipalName", targetAttributes.getValue("sAMAccountName")+"@"+sourceDomain);
-
-        for (String targetAttributeName : targetSharedAttributes.keySet()) {
-            String sourceAttributeName = targetSharedAttributes.get(targetAttributeName);
-            Collection<Object> values = targetAttributes.getValues(targetAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            sourceAttributes.setValues(sourceAttributeName, values);
+        Attribute dnAttribute = sourceAttributes.remove("dn");
+        if (sourceDn == null) {
+            sourceDn = new DN((String)dnAttribute.getValue());
         }
 
         AddRequest addRequest = new AddRequest();
@@ -234,163 +934,125 @@ public class IPAUserModule extends Module {
 
         source.add(session, addRequest, addResponse);
 
-        // sync shared attributes
+        if (importTargetUserMapping2 == null) return;
 
-        SearchResult sourceResult = source.find(sourceDn);
+        SearchResult sourceResult = source.find(session, sourceDn);
         sourceAttributes = sourceResult.getAttributes();
-
-        ModifyRequest modifyRequest = new ModifyRequest();
-        modifyRequest.setDn(targetDn);
-
-        for (String sourceAttributeName : sourceSharedAttributes.keySet()) {
-            String targetAttributeName = sourceSharedAttributes.get(sourceAttributeName);
-            Collection<Object> values = sourceAttributes.getValues(sourceAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            modifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(targetAttributeName, values)
-            ));
-        }
-
-        if (!modifyRequest.isEmpty()) {
-            ModifyResponse modifyResponse = new ModifyResponse();
-
-            target.modify(session, modifyRequest, modifyResponse);
-        }
-    }
-
-    public void addTargetUser(Session session, DN sourceDn, Attributes sourceAttributes) throws Exception {
-
-        log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("ADD TARGET USER", 60));
-        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
-        log.debug(TextUtil.displaySeparator(60));
-
-        sourceAttributes.print();
-
-        log.debug("");
-
-        RDNBuilder rb = new RDNBuilder();
-        rb.set("CN", sourceAttributes.getValue("cn"));
-        RDN rdn = rb.toRdn();
-
-        DN targetDn = rdn.append("CN=Users").append(target.getBaseDn());
-
-        Attributes targetAttributes = new Attributes();
-        targetAttributes.addValue("objectClass", "user");
-        targetAttributes.setValue("sAMAccountName", sourceAttributes.getValue("uid"));
-        targetAttributes.setValue("userAccountControl", "512");
-
-        AddRequest addRequest = new AddRequest();
-        addRequest.setDn(targetDn);
-        addRequest.setAttributes(targetAttributes);
-
-        AddResponse addResponse = new AddResponse();
-
-        target.add(session, addRequest, addResponse);
-
-        // syncback shared attributes
-
-        SearchResult targetResult = target.find(targetDn);
-        targetAttributes = targetResult.getAttributes();
-
-        ModifyRequest modifyRequest = new ModifyRequest();
-        modifyRequest.setDn(sourceDn);
-
-        Attribute sourceObjectClasses = sourceAttributes.get("objectClass");
-        if (!sourceObjectClasses.containsValue("extensibleObject")) {
-            modifyRequest.addModification(new Modification(
-                    Modification.ADD,
-                    new Attribute("objectClass", "extensibleObject")
-            ));
-        }
-
-        for (String targetAttributeName : targetSharedAttributes.keySet()) {
-            String sourceAttributeName = targetSharedAttributes.get(targetAttributeName);
-            Collection<Object> values = targetAttributes.getValues(targetAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            modifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(sourceAttributeName, values)
-            ));
-        }
-
-        if (!modifyRequest.isEmpty()) {
-            ModifyResponse modifyResponse = new ModifyResponse();
-
-            source.modify(session, modifyRequest, modifyResponse);
-        }
-    }
-
-    public void updateTargetUser(Session session, DN sourceDn, Attributes sourceAttributes) throws Exception {
-
-        log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("UPDATE TARGET USER", 60));
-        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
-        log.debug(TextUtil.displaySeparator(60));
-
-        log.debug("");
-
-        RDNBuilder rb = new RDNBuilder();
-        rb.set("CN", sourceAttributes.getValue("cn"));
-        RDN rdn = rb.toRdn();
-
-        DN targetDn = rdn.append("CN=Users").append(target.getBaseDn());
 
         ModifyRequest targetModifyRequest = new ModifyRequest();
         targetModifyRequest.setDn(targetDn);
 
-        for (String sourceAttributeName : sourceSharedAttributes.keySet()) {
-            String targetAttributeName = sourceSharedAttributes.get(sourceAttributeName);
-            Collection<Object> values = sourceAttributes.getValues(sourceAttributeName);
-            if (values == null || values.isEmpty()) continue;
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("ipa", sourceAttributes);
 
-            targetModifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(targetAttributeName, values)
-            ));
+        importTargetUserMapping2.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse modifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, modifyResponse);
         }
+    }
+
+    public void linkTargetUser(Session session, SearchResult targetEntry, SearchResult sourceEntry) throws Exception {
+
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("LINK TARGET USER", 60));
+        log.debug(TextUtil.displayLine(" - "+targetDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("samba", targetAttributes);
+
+        linkTargetUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+
+        if (linkTargetUserMapping2 == null) return;
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("ipa", sourceAttributes);
+
+        linkTargetUserMapping2.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
 
             target.modify(session, targetModifyRequest, targetModifyResponse);
         }
+    }
 
-        // syncback shared attributes
+    public void syncTargetUser(Session session, SearchResult targetEntry, SearchResult sourceEntry) throws Exception {
 
-        SearchResult targetResult = target.find(targetDn);
-        Attributes targetAttributes = targetResult.getAttributes();
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("SYNC TARGET USER", 60));
+        log.debug(TextUtil.displayLine(" - "+targetDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
 
-        Attribute sourceObjectClasses = sourceAttributes.get("objectClass");
-        if (!sourceObjectClasses.containsValue("extensibleObject")) {
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("samba", targetAttributes);
 
-            sourceModifyRequest.addModification(new Modification(
-                    Modification.ADD,
-                    new Attribute("objectClass", "extensibleObject")
-            ));
-        }
-
-        for (String targetAttributeName : targetSharedAttributes.keySet()) {
-            String sourceAttributeName = targetSharedAttributes.get(targetAttributeName);
-            Collection<Object> values = targetAttributes.getValues(targetAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            sourceModifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(sourceAttributeName, values)
-            ));
-        }
+        syncTargetUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
 
             source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+
+        if (syncTargetUserMapping2 == null) return;
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set("ipa", sourceAttributes);
+
+        syncTargetUserMapping2.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse targetModifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, targetModifyResponse);
         }
     }
 
@@ -467,11 +1129,11 @@ public class IPAUserModule extends Module {
     public SearchResult findTargetUser(Session session, DN dn) throws Exception {
 
         RDN rdn = dn.getRdn();
-        Object uid = rdn.get("uid");
+        Object key = rdn.get(sourceKeyAttribute);
 
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.setDn(target.getBaseDn());
-        searchRequest.setFilter("(sAMAccountName="+uid+")");
+        searchRequest.setFilter("("+targetKeyAttribute+"="+key+")");
 
         SearchResponse searchResponse = new SearchResponse();
 

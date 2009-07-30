@@ -5,4 +5,9 @@
 
 <partition>
 
+  <mapping-file>DIR-INF/mappings-ipa-user.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-ipa-group.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-samba-user.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-samba-group.xml</mapping-file>
+
 </partition>

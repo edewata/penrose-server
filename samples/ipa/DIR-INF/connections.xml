@@ -13,11 +13,15 @@
     </parameter>
     <parameter>
       <param-name>java.naming.security.principal</param-name>
-      <param-value>cn=Directory Manager</param-value>
+      <param-value>uid=sync,cn=sysaccounts,cn=etc,dc=example,dc=com</param-value>
     </parameter>
     <parameter>
       <param-name>java.naming.security.credentials</param-name>
       <param-value>Secret123</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.ldap.attributes.binary</param-name>
+      <param-value>objectGUID objectSid</param-value>
     </parameter>
   </connection>
 
@@ -29,11 +33,15 @@
     </parameter>
     <parameter>
       <param-name>java.naming.security.principal</param-name>
-      <param-value>CN=Administrator,CN=Users,DC=example,DC=com</param-value>
+      <param-value>CN=Sync,CN=Users,DC=example,DC=com</param-value>
     </parameter>
     <parameter>
       <param-name>java.naming.security.credentials</param-name>
       <param-value>Secret123</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.ldap.attributes.binary</param-name>
+      <param-value>objectGUID objectSid</param-value>
     </parameter>
   </connection>
 

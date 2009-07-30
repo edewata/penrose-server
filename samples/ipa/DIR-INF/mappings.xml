@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mappings PUBLIC
+  "-//Penrose/DTD Mappings ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/mappings.dtd">
+
+<mappings>
+
+  <mapping name="AddSourceUser">
+
+    <rule name="dn">
+      <expression>
+return "uid="+sAMAccountName+",cn=users,cn=accounts,dc=domain1,dc=com";
+      </expression>
+    </rule>
+    
+    <rule name="objectClass">
+      <constant>inetOrgPerson</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>inetUser</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>krbPrincipalAux</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>organizationalPerson</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>person</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>posixAccount</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>radiusProfile</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+    
+    <rule name="cn">
+      <variable>cn</variable>
+    </rule>
+    <rule name="sn">
+      <expression>
+if (sn != void &amp;&amp; sn != null) return sn;
+if (cn == void || cn == null) return null;
+var i = cn.lastIndexOf(' ');
+return i >= 0 ? cn.substring(i+1) : cn;
+      </expression>
+    </rule>
+    <rule name="uid">
+      <variable>sAMAccountName</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <expression>
+if (homeDirectory == void || homeDirectory == null) return "/tmp";
+return homeDirectory;
+      </expression>
+    </rule>
+    <rule name="gidNumber">
+      <constant>0</constant>
+    </rule>
+
+    <rule name="krbPrincipalName">
+      <expression>
+if (sAMAccountName == void || sAMAccountName == null) return sn+"@domain1.com";
+return sAMAccountName+"@domain1.com";
+      </expression>
+    </rule>
+    <rule name="krbPasswordExpiration">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (accountExpires == void || accountExpires == null) return null;
+if (accountExpires.equals("0") || accountExpires.equals(""+ActiveDirectory.MAX_TIMESTAMP)) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(accountExpires));
+      </expression>
+    </rule>
+    <rule name="krbLastPwdChange">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (pwdLastSet == void || pwdLastSet == null) return null;
+if (pwdLastSet.equals("0")) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(pwdLastSet));
+      </expression>
+    </rule>
+
+    <rule name="objectGUID">
+      <variable>objectGUID</variable>
+    </rule>
+    <rule name="objectSid">
+      <variable>objectSid</variable>
+    </rule>
+    <rule name="lastLogon">
+      <variable>lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <variable>userAccountControl</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UpdateSourceUser">
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="cn">
+      <variable>cn</variable>
+    </rule>
+    <rule name="sn">
+      <expression>
+if (sn != void &amp;&amp; sn != null) return sn;
+if (cn == void || cn == null) return null;
+var i = cn.lastIndexOf(' ');
+return i >= 0 ? cn.substring(i+1) : cn;
+      </expression>
+    </rule>
+    <rule name="uid">
+      <variable>sAMAccountName</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <expression>
+if (homeDirectory == void || homeDirectory == null) return "/tmp";
+return homeDirectory;
+      </expression>
+    </rule>
+    <rule name="gidNumber">
+      <constant>0</constant>
+    </rule>
+
+    <rule name="krbPasswordExpiration">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (accountExpires == void || accountExpires == null) return null;
+if (accountExpires.equals("0") || accountExpires.equals(""+ActiveDirectory.MAX_TIMESTAMP)) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(accountExpires));
+      </expression>
+    </rule>
+    <rule name="krbLastPwdChange">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (pwdLastSet == void || pwdLastSet == null) return null;
+if (pwdLastSet.equals("0")) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(pwdLastSet));
+      </expression>
+    </rule>
+
+    <rule name="objectGUID">
+      <variable>objectGUID</variable>
+    </rule>
+    <rule name="objectSid">
+      <variable>objectSid</variable>
+    </rule>
+    <rule name="lastLogon">
+      <variable>lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <variable>userAccountControl</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="AddTargetUser">
+
+    <rule name="dn">
+      <expression>
+return "CN="+cn+",CN=Users,DC=domain1,DC=com";
+      </expression>
+    </rule>
+
+    <rule name="objectClass">
+      <constant>user</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>person</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>organizationalPerson</constant>
+    </rule>
+
+    <rule name="cn">
+      <variable>cn</variable>
+    </rule>
+    <rule name="sn">
+      <expression>
+if (sn != void &amp;&amp; sn != null) return sn;
+if (cn == void || cn == null) return null;
+var i = cn.lastIndexOf(' ');
+return i >= 0 ? cn.substring(i+1) : null;
+      </expression>
+    </rule>
+    <rule name="sAMAccountName">
+      <variable>uid</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <variable>homeDirectory</variable>
+    </rule>
+
+    <rule name="accountExpires">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (krbPasswordExpiration == void || krbPasswordExpiration == null) return null;
+
+return ActiveDirectory.toTimestamp(IPA.toDate(krbPasswordExpiration));
+      </expression>
+    </rule>
+    <rule name="pwdLastSet">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (krbLastPwdChange == void || krbLastPwdChange == null) return null;
+
+return ActiveDirectory.toTimestamp(IPA.toDate(krbLastPwdChange));
+      </expression>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <expression>
+if (userAccountControl == void || userAccountControl == null) return 512;
+return userAccountControl;
+      </expression>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UpdateTargetUser">
+
+    <rule name="cn">
+      <variable>cn</variable>
+    </rule>
+    <rule name="sn">
+      <expression>
+if (sn != void &amp;&amp; sn != null) return sn;
+if (cn == void || cn == null) return null;
+var i = cn.lastIndexOf(' ');
+return i >= 0 ? cn.substring(i+1) : null;
+      </expression>
+    </rule>
+    <rule name="sAMAccountName">
+      <variable>uid</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <variable>homeDirectory</variable>
+    </rule>
+
+    <rule name="accountExpires">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (krbPasswordExpiration == void || krbPasswordExpiration == null) return null;
+
+return ActiveDirectory.toTimestamp(IPA.toDate(krbPasswordExpiration));
+      </expression>
+    </rule>
+    <rule name="pwdLastSet">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (krbLastPwdChange == void || krbLastPwdChange == null) return null;
+
+return ActiveDirectory.toTimestamp(IPA.toDate(krbLastPwdChange));
+      </expression>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <expression>
+if (userAccountControl == void || userAccountControl == null) return 512;
+return userAccountControl;
+      </expression>
+    </rule>
+
+  </mapping>
+
+  <mapping name="AddSourceGroup">
+
+    <rule name="dn">
+      <expression>
+return "cn="+sAMAccountName+",cn=groups,cn=accounts,dc=domain1,dc=com";
+      </expression>
+    </rule>
+
+    <rule name="objectClass">
+      <constant>groupOfNames</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>posixGroup</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="cn">
+      <variable>sAMAccountName</variable>
+    </rule>
+    <rule name="description">
+      <variable>description</variable>
+    </rule>
+    <rule name="objectGUID">
+      <variable>objectGUID</variable>
+    </rule>
+    <rule name="objectSid">
+      <variable>objectSid</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UpdateSourceGroup">
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="cn">
+      <variable>sAMAccountName</variable>
+    </rule>
+    <rule name="description">
+      <variable>description</variable>
+    </rule>
+    <rule name="objectGUID">
+      <variable>objectGUID</variable>
+    </rule>
+    <rule name="objectSid">
+      <variable>objectSid</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="AddTargetGroup">
+
+    <rule name="dn">
+      <expression>
+return "CN="+cn+",CN=Users,DC=domain1,DC=com";
+      </expression>
+    </rule>
+
+    <rule name="objectClass">
+      <constant>group</constant>
+    </rule>
+
+    <rule name="sAMAccountName">
+      <variable>cn</variable>
+    </rule>
+    <rule name="description">
+      <variable>description</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UpdateTargetGroup">
+
+    <rule name="sAMAccountName">
+      <variable>cn</variable>
+    </rule>
+    <rule name="description">
+      <variable>description</variable>
+    </rule>
+
+    <rule name="objectSid">
+      <variable>objectSid</variable>
+    </rule>
+
+  </mapping>
+
+</mappings>

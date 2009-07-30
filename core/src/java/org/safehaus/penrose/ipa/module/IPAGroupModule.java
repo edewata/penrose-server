@@ -7,6 +7,11 @@ import org.safehaus.penrose.util.TextUtil;
 import org.safehaus.penrose.source.SourceManager;
 import org.safehaus.penrose.module.Module;
 import org.safehaus.penrose.session.Session;
+import org.safehaus.penrose.mapping.Mapping;
+import org.safehaus.penrose.mapping.MappingManager;
+import org.safehaus.penrose.interpreter.Interpreter;
+import org.safehaus.penrose.filter.Filter;
+import org.safehaus.penrose.filter.SimpleFilter;
 
 import java.util.*;
 
@@ -18,20 +23,44 @@ public class IPAGroupModule extends Module {
     LDAPSource source;
     LDAPConnection sourceConnection;
 
+    String sourceKeyAttribute;
+    String sourceLinkAttribute;
+
     LDAPSource sourceUsers;
     LDAPSource sourceGroups;
+
+    Mapping importSourceGroupMapping;
+    Mapping importSourceGroupMapping2;
+
+    Mapping syncSourceGroupMapping;
+    Mapping syncSourceGroupMapping2;
+
+    Mapping unlinkSourceGroupMapping;
+    Mapping unlinkSourceGroupMapping2;
 
     LDAPSource target;
     LDAPConnection targetConnection;
 
+    String targetKeyAttribute;
+    String targetLinkAttribute;
+
     LDAPSource targetUsers;
     LDAPSource targetGroups;
 
-    Session session;
-    LDAPClient client;
+    Mapping importTargetGroupMapping;
+    Mapping importTargetGroupMapping2;
 
-    Map<String,String> sourceSharedAttributes = new LinkedHashMap<String,String>();
-    Map<String,String> targetSharedAttributes = new LinkedHashMap<String,String>();
+    Mapping syncTargetGroupMapping;
+    Mapping syncTargetGroupMapping2;
+
+    Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
+    Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
+
+    Map<String,DN> targetDns = new LinkedHashMap<String,DN>();
+    Map<String,String> targetDnMapping = new LinkedHashMap<String,String>();
+
+    Set<String> ignoredSourceDns = new HashSet<String>();
+    Set<String> ignoredTargetDns = new HashSet<String>();
 
     public IPAGroupModule() {
     }
@@ -43,6 +72,7 @@ public class IPAGroupModule extends Module {
         log.debug(TextUtil.displaySeparator(60));
 
         SourceManager sourceManager = partition.getSourceManager();
+        MappingManager mappingManager = partition.getMappingManager();
 
         String sourceName = getParameter("source");
         source = (LDAPSource)sourceManager.getSource(sourceName);
@@ -54,6 +84,27 @@ public class IPAGroupModule extends Module {
         String sourceGroupsName = getParameter("sourceGroups");
         sourceGroups = (LDAPSource)sourceManager.getSource(sourceGroupsName);
 
+        sourceKeyAttribute = getParameter("sourceKeyAttribute");
+        sourceLinkAttribute = getParameter("sourceLinkAttribute");
+
+        String importSourceGroupMappingName = getParameter("importSourceGroupMapping");
+        importSourceGroupMapping = mappingManager.getMapping(importSourceGroupMappingName);
+
+        String importSourceGroupMapping2Name = getParameter("importSourceGroupMapping2");
+        importSourceGroupMapping2 = mappingManager.getMapping(importSourceGroupMapping2Name);
+
+        String syncSourceGroupMappingName = getParameter("syncSourceGroupMapping");
+        syncSourceGroupMapping = mappingManager.getMapping(syncSourceGroupMappingName);
+
+        String syncSourceGroupMapping2Name = getParameter("syncSourceGroupMapping2");
+        syncSourceGroupMapping2 = mappingManager.getMapping(syncSourceGroupMapping2Name);
+
+        String unlinkSourceGroupMappingName = getParameter("unlinkSourceGroupMapping");
+        unlinkSourceGroupMapping = mappingManager.getMapping(unlinkSourceGroupMappingName);
+
+        String unlinkSourceGroupMapping2Name = getParameter("unlinkSourceGroupMapping2");
+        unlinkSourceGroupMapping2 = mappingManager.getMapping(unlinkSourceGroupMapping2Name);
+
         String targetName = getParameter("target");
         target = (LDAPSource)sourceManager.getSource(targetName);
         targetConnection = (LDAPConnection)target.getConnection();
@@ -64,27 +115,94 @@ public class IPAGroupModule extends Module {
         String targetGroupsName = getParameter("targetGroups");
         targetGroups = (LDAPSource)sourceManager.getSource(targetGroupsName);
 
-        session = createAdminSession();
-        client = sourceConnection.getClient(session);
+        targetKeyAttribute = getParameter("targetKeyAttribute");
+        targetLinkAttribute = getParameter("targetLinkAttribute");
 
-        //sourceSharedAttributes.put("description", "description");
+        String importTargetGroupMappingName = getParameter("importTargetGroupMapping");
+        importTargetGroupMapping = mappingManager.getMapping(importTargetGroupMappingName);
 
-        targetSharedAttributes.put("objectGUID", "ntUniqueId");
-        targetSharedAttributes.put("objectSid", "ntSid");
+        String importTargetGroupMapping2Name = getParameter("importTargetGroupMapping2");
+        importTargetGroupMapping2 = mappingManager.getMapping(importTargetGroupMapping2Name);
+
+        String syncTargetGroupMappingName = getParameter("syncTargetGroupMapping");
+        syncTargetGroupMapping = mappingManager.getMapping(syncTargetGroupMappingName);
+
+        String syncTargetGroupMapping2Name = getParameter("syncTargetGroupMapping2");
+        syncTargetGroupMapping2 = mappingManager.getMapping(syncTargetGroupMapping2Name);
+
+/*
+        DN sourceAdminDn = new DN("cn=admins,cn=groups,cn=accounts").append(source.getBaseDn());
+        DN targetAdminDn = new DN("CN=Administrators,CN=Builtin").append(target.getBaseDn());
+
+        sourceDns.put(sourceAdminDn.getNormalizedDn(), sourceAdminDn);
+        sourceDnMapping.put(sourceAdminDn.getNormalizedDn(), targetAdminDn.getNormalizedDn());
+
+        targetDns.put(targetAdminDn.getNormalizedDn(), targetAdminDn);
+        targetDnMapping.put(targetAdminDn.getNormalizedDn(), sourceAdminDn.getNormalizedDn());
+*/
     }
 
     public void destroy() throws Exception {
-        log.debug("Closing session.");
-        session.close();
     }
 
-    public void synchronize() throws Exception {
-        Session session = null;
+    public void syncGroups() throws Exception {
+        final Session session = createAdminSession();
 
         try {
-            session = createAdminSession();
+            SearchRequest sourceRequest = new SearchRequest();
 
-            synchronize(session);
+            SearchResponse sourceResponse = new SearchResponse() {
+                public void add(SearchResult sourceEntry) throws Exception {
+
+                    DN sourceDn = sourceEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+sourceDn);
+
+                    if (ignoredSourceDns.contains(sourceDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+sourceDn);
+                        return;
+                    }
+
+                    SearchResult targetEntry = findTargetGroup(session, sourceEntry);
+
+                    if (targetEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
+                        importSourceGroup(session, sourceEntry);
+
+                    } else {
+                        if (log.isInfoEnabled()) log.info("Syncing "+sourceDn);
+                        syncSourceGroup(session, sourceEntry, targetEntry);
+                    }
+                }
+            };
+
+            sourceGroups.search(session, sourceRequest, sourceResponse);
+
+            SearchRequest targetRequest = new SearchRequest();
+
+            SearchResponse targetResponse = new SearchResponse() {
+                public void add(SearchResult targetEntry) throws Exception {
+
+                    DN targetDn = targetEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+targetDn);
+
+                    if (ignoredTargetDns.contains(targetDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+targetDn);
+                        return;
+                    }
+
+                    SearchResult sourceEntry = findSourceGroup(session, targetEntry);
+
+                    if (sourceEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+targetDn);
+                        importTargetGroup(session, targetEntry);
+
+                    } else {
+                        if (log.isInfoEnabled()) log.info("Skipping "+targetDn);
+                    }
+                }
+            };
+
+            targetGroups.search(session, targetRequest, targetResponse);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -95,81 +213,224 @@ public class IPAGroupModule extends Module {
         }
     }
 
-    public void synchronize(Session session) throws Exception {
+    public void syncSourceGroups() throws Exception {
+        final Session session = createAdminSession();
 
-        log.info("Synchronizing Groups:");
+        try {
+            SearchRequest sourceRequest = new SearchRequest();
 
-        final Map<String,SearchResult> sourceMap = new TreeMap<String,SearchResult>();
-        final Map<String,SearchResult> targetMap = new TreeMap<String,SearchResult>();
+            SearchResponse sourceResponse = new SearchResponse() {
+                public void add(SearchResult sourceEntry) throws Exception {
 
-        SearchRequest sourceRequest = new SearchRequest();
+                    DN sourceDn = sourceEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+sourceDn);
 
-        SearchResponse sourceResponse = new SearchResponse() {
-            public void add(SearchResult result) throws Exception {
-                DN dn = result.getDn();
-                RDN rdn = dn.getRdn();
-                String cn = (String)rdn.get("cn");
-                sourceMap.put(cn, result);
-            }
-        };
+                    if (ignoredSourceDns.contains(sourceDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+sourceDn);
+                        return;
+                    }
 
-        sourceGroups.search(session, sourceRequest, sourceResponse);
+                    SearchResult targetEntry = findTargetGroup(session, sourceEntry);
 
-        SearchRequest targetRequest = new SearchRequest();
+                    if (targetEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
+                        importSourceGroup(session, sourceEntry);
 
-        SearchResponse targetResponse = new SearchResponse() {
-            public void add(SearchResult result) throws Exception {
-                Attribute attribute = result.getAttribute("sAMAccountName");
-                if (attribute == null) return;
+                    } else {
+                        if (log.isInfoEnabled()) log.info("Syncing "+sourceDn);
+                        syncSourceGroup(session, sourceEntry, targetEntry);
+                    }
+                }
+            };
 
-                String sAMAccountName = (String)attribute.getValue();
-                targetMap.put(sAMAccountName, result);
-            }
-        };
+            sourceGroups.search(session, sourceRequest, sourceResponse);
 
-        targetGroups.search(session, targetRequest, targetResponse);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
 
-        Set<String> newSourceKeys = new TreeSet<String>();
-        newSourceKeys.addAll(targetMap.keySet());
-        newSourceKeys.removeAll(sourceMap.keySet());
-        log.info("Adding source: "+newSourceKeys);
-
-        Set<String> updateTargetKeys = new TreeSet<String>();
-        updateTargetKeys.addAll(targetMap.keySet());
-        updateTargetKeys.retainAll(sourceMap.keySet());
-        log.info("Updating target: "+updateTargetKeys);
-
-        Set<String> newTargetKeys = new TreeSet<String>();
-        newTargetKeys.addAll(sourceMap.keySet());
-        newTargetKeys.removeAll(targetMap.keySet());
-        log.info("Adding target: "+newTargetKeys);
-
-        for (String key  : newSourceKeys) {
-            
-            if (key.equals("Administrators")) continue;
-
-            SearchResult result = targetMap.get(key);
-            addSourceGroup(session, result.getDn(), result.getAttributes());
-        }
-
-        for (String key  : updateTargetKeys) {
-            SearchResult result = sourceMap.get(key);
-            updateTargetGroup(session, result.getDn(), result.getAttributes());
-        }
-
-        for (String key  : newTargetKeys) {
-
-            SearchResult result = sourceMap.get(key);
-
-            if (key.equals("admins")) {
-                updateTargetGroup(session, result.getDn(), result.getAttributes());
-            } else {
-                addTargetGroup(session, result.getDn(), result.getAttributes());
-            }
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
         }
     }
 
-    public SearchResult findTargetUser(Session session, DN dn) throws Exception {
+    public void syncTargetGroups() throws Exception {
+        final Session session = createAdminSession();
+
+        try {
+            SearchRequest targetRequest = new SearchRequest();
+
+            SearchResponse targetResponse = new SearchResponse() {
+                public void add(SearchResult targetEntry) throws Exception {
+
+                    DN targetDn = targetEntry.getDn();
+                    if (log.isInfoEnabled()) log.info("Initializing "+targetDn);
+
+                    if (ignoredTargetDns.contains(targetDn.getNormalizedDn())) {
+                        if (log.isInfoEnabled()) log.info("Ignoring "+targetDn);
+                        return;
+                    }
+
+                    SearchResult sourceEntry = findSourceGroup(session, targetEntry);
+
+                    if (sourceEntry == null) {
+                        if (log.isInfoEnabled()) log.info("Adding "+targetDn);
+                        importTargetGroup(session, targetEntry);
+
+                    } else {
+                        if (log.isInfoEnabled()) log.info("Syncing "+targetDn);
+                        syncTargetGroup(session, targetEntry, sourceEntry);
+                    }
+                }
+            };
+
+            targetGroups.search(session, targetRequest, targetResponse);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void syncSourceGroup(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            Filter filter = new SimpleFilter(sourceKeyAttribute, "=", key);
+
+            if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+            SearchRequest sourceRequest = new SearchRequest();
+            sourceRequest.setFilter(filter);
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceGroups.search(session, sourceRequest, sourceResponse);
+
+            if (!sourceResponse.hasNext()) {
+                if (log.isInfoEnabled()) log.info("Entry not found.");
+                throw new Exception("Entry not found.");
+            }
+
+            SearchResult sourceEntry = sourceResponse.next();
+            if (log.isInfoEnabled()) log.info("Initializing "+sourceEntry.getDn());
+
+            SearchResult targetEntry = findTargetGroup(session, sourceEntry);
+
+            if (targetEntry == null) {
+                if (log.isInfoEnabled()) log.info("Adding "+sourceEntry.getDn());
+                importSourceGroup(session, sourceEntry);
+
+            } else {
+                if (log.isInfoEnabled()) log.info("Syncing "+sourceEntry.getDn());
+                syncSourceGroup(session, sourceEntry, targetEntry);
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void syncTargetGroup(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            Filter filter = new SimpleFilter(targetKeyAttribute, "=", key);
+
+            if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+            SearchRequest targetRequest = new SearchRequest();
+            targetRequest.setFilter(filter);
+
+            SearchResponse targetResponse = new SearchResponse();
+
+            targetGroups.search(session, targetRequest, targetResponse);
+
+            if (!targetResponse.hasNext()) {
+                if (log.isInfoEnabled()) log.info("Entry not found.");
+                throw new Exception("Entry not found.");
+            }
+
+            SearchResult targetEntry = targetResponse.next();
+            if (log.isInfoEnabled()) log.info("Initializing "+targetEntry.getDn());
+
+            SearchResult sourceEntry = findSourceGroup(session, targetEntry);
+
+            if (sourceEntry == null) {
+                if (log.isInfoEnabled()) log.info("Adding "+targetEntry.getDn());
+                importTargetGroup(session, targetEntry);
+
+            } else {
+                if (log.isInfoEnabled()) log.info("Syncing "+targetEntry.getDn());
+                syncTargetGroup(session, targetEntry, sourceEntry);
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void unlinkSourceGroup(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            Filter filter = new SimpleFilter(sourceKeyAttribute, "=", key);
+
+            if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+            SearchRequest sourceRequest = new SearchRequest();
+            sourceRequest.setFilter(filter);
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceGroups.search(session, sourceRequest, sourceResponse);
+
+            if (!sourceResponse.hasNext()) {
+                if (log.isInfoEnabled()) log.info("Entry not found.");
+                throw new Exception("Entry not found.");
+            }
+
+            SearchResult sourceEntry = sourceResponse.next();
+            if (log.isInfoEnabled()) log.info("Unlinking "+sourceEntry.getDn());
+
+            Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+
+            if (linkAttribute == null) {
+                if (log.isInfoEnabled()) log.info("Entry not linked.");
+
+            } else {
+                SearchResult targetEntry = findTargetGroup(session, sourceEntry);
+                if (log.isInfoEnabled()) log.info("Unlinking "+(targetEntry == null ? null : targetEntry.getDn()));
+                unlinkSourceGroup(session, sourceEntry, targetEntry);
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public SearchResult findSourceUser(Session session, DN dn) throws Exception {
 
         RDN rdn = dn.getRdn();
         Object uid = rdn.get("uid");
@@ -190,13 +451,166 @@ public class IPAGroupModule extends Module {
         return searchResponse.next();
     }
 
+    public SearchResult findSourceGroup(Session session, SearchResult targetEntry) throws Exception {
+
+        SearchResult sourceEntry = null;
+
+        Attribute linkAttribute = targetEntry.getAttribute(targetLinkAttribute);
+        if (linkAttribute != null) {
+
+            Object link = linkAttribute.getValue();
+            Filter filter = new SimpleFilter(sourceLinkAttribute, "=", link);
+
+            if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+            SearchRequest sourceRequest = new SearchRequest();
+            sourceRequest.setFilter(filter);
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceGroups.search(session, sourceRequest, sourceResponse);
+
+            if (sourceResponse.hasNext()) {
+                sourceEntry = sourceResponse.next();
+                if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+            }
+        }
+
+        if (sourceEntry == null) {
+            String normalizedTargetDn = targetEntry.getDn().getNormalizedDn();
+            String normalizedSourceDn = targetDnMapping.get(normalizedTargetDn);
+
+            if (normalizedSourceDn != null) {
+                DN sourceDn = sourceDns.get(normalizedSourceDn);
+
+                if (log.isInfoEnabled()) log.info("Searching source using static mapping: "+sourceDn);
+
+                SearchRequest sourceRequest = new SearchRequest();
+                sourceRequest.setDn(sourceDn);
+                sourceRequest.setScope(SearchRequest.SCOPE_BASE);
+
+                SearchResponse sourceResponse = new SearchResponse();
+
+                source.search(session, sourceRequest, sourceResponse);
+
+                if (sourceResponse.hasNext()) {
+                    sourceEntry = sourceResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+                }
+            }
+        }
+
+        if (sourceEntry == null) {
+
+            Attribute keyAttribute = targetEntry.getAttribute(targetKeyAttribute);
+            if (keyAttribute != null) {
+
+                String key = (String)keyAttribute.getValue();
+                Filter filter =new SimpleFilter(sourceKeyAttribute, "=", key);
+
+                if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+                SearchRequest sourceRequest = new SearchRequest();
+                sourceRequest.setFilter(filter);
+
+                SearchResponse sourceResponse = new SearchResponse();
+
+                sourceGroups.search(session, sourceRequest, sourceResponse);
+
+                if (sourceResponse.hasNext()) {
+                    sourceEntry = sourceResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+                }
+            }
+        }
+
+        return sourceEntry;
+    }
+
+    public SearchResult findTargetGroup(Session session, SearchResult sourceEntry) throws Exception {
+
+        SearchResult targetEntry = null;
+
+        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+        if (linkAttribute != null) {
+
+            Object link = linkAttribute.getValue();
+            Filter filter = new SimpleFilter(targetLinkAttribute, "=", link);
+
+            if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+            SearchRequest targetRequest = new SearchRequest();
+            targetRequest.setFilter(filter);
+
+            SearchResponse targetResponse = new SearchResponse();
+
+            targetGroups.search(session, targetRequest, targetResponse);
+
+            if (targetResponse.hasNext()) {
+                targetEntry = targetResponse.next();
+                if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+            }
+        }
+
+        if (targetEntry == null) {
+
+            String normalizedSourceDn = sourceEntry.getDn().getNormalizedDn();
+            String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
+
+            if (normalizedTargetDn != null) {
+                DN targetDn = targetDns.get(normalizedTargetDn);
+
+                if (log.isInfoEnabled()) log.info("Searching target using static mapping: "+targetDn);
+
+                SearchRequest targetRequest = new SearchRequest();
+                targetRequest.setDn(targetDn);
+                targetRequest.setScope(SearchRequest.SCOPE_BASE);
+
+                SearchResponse targetResponse = new SearchResponse();
+
+                target.search(session, targetRequest, targetResponse);
+
+                if (targetResponse.hasNext()) {
+                    targetEntry = targetResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+                }
+            }
+        }
+
+        if (targetEntry == null) {
+
+            Attribute keyAttribute = sourceEntry.getAttribute(sourceKeyAttribute);
+            if (keyAttribute != null) {
+
+                String key = (String)keyAttribute.getValue();
+                Filter filter = new SimpleFilter(targetKeyAttribute, "=", key);
+
+                if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+                SearchRequest targetRequest = new SearchRequest();
+                targetRequest.setFilter(filter);
+
+                SearchResponse targetResponse = new SearchResponse();
+
+                targetGroups.search(session, targetRequest, targetResponse);
+
+                if (targetResponse.hasNext()) {
+                    targetEntry = targetResponse.next();
+                    if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+                }
+            }
+        }
+
+        return targetEntry;
+    }
+
     public DN createSourceGroupDn(DN dn, Attributes attributes) throws Exception {
 
         RDNBuilder rb = new RDNBuilder();
         rb.set("CN", attributes.getValue("sAMAccountName"));
         RDN sourceRdn = rb.toRdn();
 
-        return sourceRdn.append("cn=groups,cn=accounts").append(source.getBaseDn());
+        return sourceRdn.append(sourceGroups.getBaseDn());
     }
 
     public DN createTargetGroupDn(DN sourceDn) throws Exception {
@@ -211,73 +625,96 @@ public class IPAGroupModule extends Module {
         return targetRdn.append("CN=Users").append(target.getBaseDn());
     }
 
-    public void addSourceGroup(Session session, DN targetDn, Attributes targetAttributes) throws Exception {
+    public Collection<Object> transformSourceMembers(Session session, Object object) throws Exception {
+        Collection<Object> input;
 
-        log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("ADD SOURCE GROUP", 60));
-        log.debug(TextUtil.displayLine(" - "+targetDn, 60));
-        log.debug(TextUtil.displaySeparator(60));
+        if (object == null) {
+            return null;
 
-        targetAttributes.print();
+        } else if (object instanceof Collection) {
+            input = (Collection<Object>)object;
 
-        log.debug("");
-
-        DN sourceDn = createSourceGroupDn(targetDn, targetAttributes);
-
-        Attributes sourceAttributes = new Attributes();
-        sourceAttributes.addValue("objectClass", "groupOfNames");
-        sourceAttributes.addValue("objectClass", "posixGroup");
-        sourceAttributes.addValue("objectClass", "extensibleObject");
-
-        sourceAttributes.setValue("description", targetAttributes.getValue("description"));
-        sourceAttributes.setValue("cn", targetAttributes.getValue("sAMAccountName"));
-
-        for (String targetAttributeName : targetSharedAttributes.keySet()) {
-            String sourceAttributeName = targetSharedAttributes.get(targetAttributeName);
-            Collection<Object> values = targetAttributes.getValues(targetAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            sourceAttributes.setValues(sourceAttributeName, values);
+        } else {
+            input = new ArrayList<Object>();
+            input.add(object);
         }
 
-        AddRequest addRequest = new AddRequest();
-        addRequest.setDn(sourceDn);
-        addRequest.setAttributes(sourceAttributes);
+        Collection<Object> output = new ArrayList<Object>();
 
-        AddResponse addResponse = new AddResponse();
-
-        source.add(session, addRequest, addResponse);
-
-        // sync shared attributes
-
-        SearchResult sourceResult = source.find(sourceDn);
-        sourceAttributes = sourceResult.getAttributes();
-
-        ModifyRequest modifyRequest = new ModifyRequest();
-        modifyRequest.setDn(targetDn);
-
-        for (String sourceAttributeName : sourceSharedAttributes.keySet()) {
-            String targetAttributeName = sourceSharedAttributes.get(sourceAttributeName);
-            Collection<Object> values = sourceAttributes.getValues(sourceAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            modifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(targetAttributeName, values)
-            ));
+        for (Object value : input) {
+            if (value instanceof DN) {
+                DN sourceMemberDn = (DN)value;
+                DN targetMemberDn = transformSourceMember(session, sourceMemberDn);
+                if (targetMemberDn != null) output.add(targetMemberDn);
+            } else {
+                String sourceMemberDn = value.toString();
+                String targetMemberDn = transformSourceMember(session, sourceMemberDn);
+                if (targetMemberDn != null) output.add(targetMemberDn);
+            }
         }
 
-        if (!modifyRequest.isEmpty()) {
-            ModifyResponse modifyResponse = new ModifyResponse();
-
-            target.modify(session, modifyRequest, modifyResponse);
-        }
+        return output;
     }
 
-    public void addTargetGroup(Session session, DN sourceDn, Attributes sourceAttributes) throws Exception {
+    public String transformSourceMember(Session session, String sourceMemberDn) throws Exception {
+        DN targetMemberDn = transformSourceMember(session, new DN(sourceMemberDn));
+        return targetMemberDn == null ? null : targetMemberDn.toString();
+    }
+
+    public DN transformSourceMember(Session session, DN sourceMemberDn) throws Exception {
+        if (log.isInfoEnabled()) log.info("Transforming source member: "+sourceMemberDn);
+
+        SearchResult sourceMemberEntry = source.find(session, sourceMemberDn);
+        if (sourceMemberEntry == null) {
+            if (log.isDebugEnabled()) log.debug("==> Source entry not found.");
+            return null;
+        }
+
+        SearchResult targetMemberEntry = findTargetEntry(session, sourceMemberEntry);
+        if (targetMemberEntry == null) {
+            if (log.isDebugEnabled()) log.debug("==> Target entry not found.");
+            return null;
+        }
+
+        DN targetMemberDn = targetMemberEntry.getDn();
+        if (log.isInfoEnabled()) log.info("==> Target member: "+targetMemberDn);
+
+        return targetMemberDn;
+    }
+
+    public SearchResult findSourceEntry(Session session, SearchResult targetEntry) throws Exception {
+
+        Attribute linkAttribute = targetEntry.getAttribute(targetLinkAttribute);
+        if (linkAttribute == null) return null;
+
+        Object link = linkAttribute.getValue();
+        Filter filter = new SimpleFilter(sourceLinkAttribute, "=", link);
+
+        if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+        SearchRequest sourceRequest = new SearchRequest();
+        sourceRequest.setFilter(filter);
+
+        SearchResponse sourceResponse = new SearchResponse();
+
+        source.search(session, sourceRequest, sourceResponse);
+
+        if (!sourceResponse.hasNext()) return null;
+
+        SearchResult sourceEntry = sourceResponse.next();
+        if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+
+        return sourceEntry;
+    }
+
+    public void importSourceGroup(Session session, SearchResult sourceEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        String normalizedSourceDn = sourceDn.getNormalizedDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
 
         log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("ADD TARGET GROUP", 60));
+        log.debug(TextUtil.displayLine("IMPORT SOURCE GROUP", 60));
         log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
         log.debug(TextUtil.displaySeparator(60));
 
@@ -285,31 +722,21 @@ public class IPAGroupModule extends Module {
 
         log.debug("");
 
-        DN targetDn = createTargetGroupDn(sourceDn);
-
         Attributes targetAttributes = new Attributes();
-        targetAttributes.addValue("objectClass", "group");
-        targetAttributes.setValue("description", sourceAttributes.getValue("description"));
-        targetAttributes.setValue("sAMAccountName", sourceAttributes.getValue("cn"));
 
-        for (Object value : sourceAttributes.getValues("member")) {
-            DN sourceMemberDn = new DN(value.toString());
-            DN targetMemberDn;
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(source.getName(), sourceAttributes);
 
-            if (sourceMemberDn.endsWith(sourceUsers.getBaseDn())) {
-                SearchResult searchResult = findTargetUser(session, sourceMemberDn);
-                if (searchResult == null) continue;
+        importSourceGroupMapping.map(interpreter, targetAttributes);
 
-                targetMemberDn = searchResult.getDn();
+        String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
+        DN targetDn = targetDns.get(normalizedTargetDn);
 
-            } else if (sourceMemberDn.endsWith(sourceGroups.getBaseDn())) {
-                targetMemberDn = createTargetGroupDn(sourceMemberDn);
-
-            } else {
-                continue;
-            }
-
-            targetAttributes.addValue("member", targetMemberDn.toString());
+        Attribute dnAttribute = targetAttributes.remove("dn");
+        if (targetDn == null) {
+            targetDn = new DN((String)dnAttribute.getValue());
         }
 
         AddRequest addRequest = new AddRequest();
@@ -320,105 +747,52 @@ public class IPAGroupModule extends Module {
 
         target.add(session, addRequest, addResponse);
 
-        // syncback shared attributes
+        if (importSourceGroupMapping2 == null) return;
 
-        SearchResult targetResult = target.find(targetDn);
+        SearchResult targetResult = target.find(session, targetDn);
         targetAttributes = targetResult.getAttributes();
 
-        ModifyRequest modifyRequest = new ModifyRequest();
-        modifyRequest.setDn(sourceDn);
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
 
-        Attribute sourceObjectClasses = sourceAttributes.get("objectClass");
-        if (!sourceObjectClasses.containsValue("extensibleObject")) {
-            modifyRequest.addModification(new Modification(
-                    Modification.ADD,
-                    new Attribute("objectClass", "extensibleObject")
-            ));
-        }
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(target.getName(), targetAttributes);
 
-        for (String targetAttributeName : targetSharedAttributes.keySet()) {
-            String sourceAttributeName = targetSharedAttributes.get(targetAttributeName);
-            Collection<Object> values = targetAttributes.getValues(targetAttributeName);
-            if (values == null || values.isEmpty()) continue;
+        importSourceGroupMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
 
-            modifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(sourceAttributeName, values)
-            ));
-        }
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
 
-        if (!modifyRequest.isEmpty()) {
-            ModifyResponse modifyResponse = new ModifyResponse();
-
-            source.modify(session, modifyRequest, modifyResponse);
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
         }
     }
 
-    public void updateTargetGroup(Session session, DN sourceDn, Attributes sourceAttributes) throws Exception {
+    public void syncSourceGroup(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
 
         log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("UPDATE TARGET GROUP", 60));
+        log.debug(TextUtil.displayLine("SYNC SOURCE GROUP", 60));
         log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
         log.debug(TextUtil.displaySeparator(60));
 
         log.debug("");
 
-        RDN rdn = sourceDn.getRdn();
-        String cn = rdn.get("cn").toString();
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
 
         ModifyRequest targetModifyRequest = new ModifyRequest();
-        DN targetDn;
+        targetModifyRequest.setDn(targetDn);
 
-        if (cn.equals("admins")) {
-            targetDn = new DN("CN=Administrators,CN=Builtin").append(target.getBaseDn());
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(source.getName(), sourceAttributes);
 
-        } else {
-            targetDn = createTargetGroupDn(sourceDn);
-            targetModifyRequest.setDn(targetDn);
-
-            Attribute sourceMemberAttribute = sourceAttributes.get("member");
-            if (sourceMemberAttribute != null) {
-
-                Attribute targetMemberAttribute = new Attribute("member");
-
-                for (Object value : sourceMemberAttribute.getValues()) {
-                    DN sourceMemberDn = new DN(value.toString());
-
-                    DN targetMemberDn;
-
-                    if (sourceMemberDn.endsWith(sourceUsers.getBaseDn())) {
-                        SearchResult searchResult = findTargetUser(session, sourceMemberDn);
-                        if (searchResult == null) continue;
-
-                        targetMemberDn = searchResult.getDn();
-
-                    } else if (sourceMemberDn.endsWith(sourceGroups.getBaseDn())) {
-                        targetMemberDn = createTargetGroupDn(sourceMemberDn);
-
-                    } else {
-                        continue;
-                    }
-
-                    targetMemberAttribute.addValue(targetMemberDn.toString());
-                }
-
-                targetModifyRequest.addModification(new Modification(
-                        Modification.REPLACE,
-                        targetMemberAttribute
-                ));
-            }
-        }
-
-        for (String sourceAttributeName : sourceSharedAttributes.keySet()) {
-            String targetAttributeName = sourceSharedAttributes.get(sourceAttributeName);
-            Collection<Object> values = sourceAttributes.getValues(sourceAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            targetModifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(targetAttributeName, values)
-            ));
-        }
+        syncSourceGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -426,38 +800,271 @@ public class IPAGroupModule extends Module {
             target.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        // syncback shared attributes
-
-        SearchResult targetResult = target.find(targetDn);
-        Attributes targetAttributes = targetResult.getAttributes();
+        if (syncSourceGroupMapping2 == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
 
-        Attribute sourceObjectClasses = sourceAttributes.get("objectClass");
-        if (!sourceObjectClasses.containsValue("extensibleObject")) {
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(target.getName(), targetAttributes);
 
-            sourceModifyRequest.addModification(new Modification(
-                    Modification.ADD,
-                    new Attribute("objectClass", "extensibleObject")
-            ));
-        }
-
-        for (String targetAttributeName : targetSharedAttributes.keySet()) {
-            String sourceAttributeName = targetSharedAttributes.get(targetAttributeName);
-            Collection<Object> values = targetAttributes.getValues(targetAttributeName);
-            if (values == null || values.isEmpty()) continue;
-
-            sourceModifyRequest.addModification(new Modification(
-                    Modification.REPLACE,
-                    new Attribute(sourceAttributeName, values)
-            ));
-        }
+        syncSourceGroupMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
 
             source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+    }
+
+    public void unlinkSourceGroup(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("UNLINK SOURCE GROUP", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN targetDn = null;
+        Attributes targetAttributes = null;
+
+        if (targetEntry != null) {
+            targetDn = targetEntry.getDn();
+            targetAttributes = targetEntry.getAttributes();
+
+            ModifyRequest targetModifyRequest = new ModifyRequest();
+            targetModifyRequest.setDn(targetDn);
+
+            Interpreter interpreter = partition.newInterpreter();
+            interpreter.set("session", session);
+            interpreter.set("module", this);
+            interpreter.set(source.getName(), sourceAttributes);
+
+            unlinkSourceGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+
+            if (!targetModifyRequest.isEmpty()) {
+                ModifyResponse targetModifyResponse = new ModifyResponse();
+
+                target.modify(session, targetModifyRequest, targetModifyResponse);
+            }
+        }
+
+        if (unlinkSourceGroupMapping2 == null) return;
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        if (targetEntry != null) interpreter.set(target.getName(), targetAttributes);
+
+        unlinkSourceGroupMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+    }
+
+    public Collection<Object> transformTargetMembers(Session session, Object object) throws Exception {
+        Collection<Object> input;
+
+        if (object == null) {
+            return null;
+
+        } else if (object instanceof Collection) {
+            input = (Collection<Object>)object;
+
+        } else {
+            input = new ArrayList<Object>();
+            input.add(object);
+        }
+
+        Collection<Object> output = new ArrayList<Object>();
+
+        for (Object value : input) {
+            if (value instanceof DN) {
+                DN targetMemberDn = (DN)value;
+                DN sourceMemberDn = transformTargetMember(session, targetMemberDn);
+                if (sourceMemberDn != null) output.add(sourceMemberDn);
+            } else {
+                String targetMemberDn = value.toString();
+                String sourceMemberDn = transformTargetMember(session, targetMemberDn);
+                if (sourceMemberDn != null) output.add(sourceMemberDn);
+            }
+        }
+
+        return output;
+    }
+
+    public String transformTargetMember(Session session, String targetMemberDn) throws Exception {
+        DN sourceMemberDn = transformTargetMember(session, new DN(targetMemberDn));
+        return sourceMemberDn == null ? null : sourceMemberDn.toString();
+    }
+
+    public DN transformTargetMember(Session session, DN targetMemberDn) throws Exception {
+        if (log.isInfoEnabled()) log.info("Transforming target member: "+targetMemberDn);
+
+        SearchResult targetMemberEntry = target.find(session, targetMemberDn);
+        if (targetMemberEntry == null) {
+            if (log.isDebugEnabled()) log.debug("==> Target entry not found.");
+            return null;
+        }
+
+        SearchResult sourceMemberEntry = findSourceEntry(session, targetMemberEntry);
+        if (sourceMemberEntry == null) {
+            if (log.isDebugEnabled()) log.debug("==> Source entry not found.");
+            return null;
+        }
+
+        DN sourceMemberDn = sourceMemberEntry.getDn();
+        if (log.isInfoEnabled()) log.info("==> Source member: "+sourceMemberDn);
+
+        return sourceMemberDn;
+    }
+
+    public SearchResult findTargetEntry(Session session, SearchResult sourceEntry) throws Exception {
+
+        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+        if (linkAttribute == null) return null;
+
+        Object link = linkAttribute.getValue();
+        Filter filter = new SimpleFilter(targetLinkAttribute, "=", link);
+
+        if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+
+        SearchRequest targetRequest = new SearchRequest();
+        targetRequest.setFilter(filter);
+
+        SearchResponse targetResponse = new SearchResponse();
+
+        target.search(session, targetRequest, targetResponse);
+
+        if (!targetResponse.hasNext()) return null;
+
+        SearchResult targetEntry = targetResponse.next();
+        if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+
+        return targetEntry;
+    }
+
+    public void importTargetGroup(Session session, SearchResult targetEntry) throws Exception {
+
+        DN targetDn = targetEntry.getDn();
+        String normalizedTargetDn = targetDn.getNormalizedDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("IMPORT TARGET GROUP", 60));
+        log.debug(TextUtil.displayLine(" - "+targetDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        targetAttributes.print();
+
+        log.debug("");
+
+        Attributes sourceAttributes = new Attributes();
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(target.getName(), targetAttributes);
+
+        importTargetGroupMapping.map(interpreter, sourceAttributes);
+
+        String normalizedSourceDn = targetDnMapping.get(normalizedTargetDn);
+        DN sourceDn = targetDns.get(normalizedSourceDn);
+
+        Attribute dnAttribute = sourceAttributes.remove("dn");
+        if (sourceDn == null) {
+            sourceDn = new DN((String)dnAttribute.getValue());
+        }
+
+        AddRequest addRequest = new AddRequest();
+        addRequest.setDn(sourceDn);
+        addRequest.setAttributes(sourceAttributes);
+
+        AddResponse addResponse = new AddResponse();
+
+        source.add(session, addRequest, addResponse);
+
+        if (importTargetGroupMapping2 == null) return;
+
+        SearchResult sourceResult = source.find(session, sourceDn);
+        sourceAttributes = sourceResult.getAttributes();
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(source.getName(), sourceAttributes);
+
+        importTargetGroupMapping2.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse targetModifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, targetModifyResponse);
+        }
+    }
+
+    public void syncTargetGroup(Session session, SearchResult targetEntry, SearchResult sourceEntry) throws Exception {
+
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("SYNC TARGET GROUP", 60));
+        log.debug(TextUtil.displayLine(" - "+targetDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(target.getName(), targetAttributes);
+
+        syncTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+
+        if (syncTargetGroupMapping2 == null) return;
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(source.getName(), sourceAttributes);
+
+        syncTargetGroupMapping2.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse targetModifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, targetModifyResponse);
         }
     }
 
@@ -491,11 +1098,12 @@ public class IPAGroupModule extends Module {
 
         Attribute attribute = memberModification.getAttribute();
         DN memberDn = new DN(attribute.getValue().toString());
+        SearchResult sourceMemberEntry = source.find(session, memberDn);
 
         DN targetMemberDn;
 
         if (memberDn.endsWith(sourceUsers.getBaseDn())) {
-            SearchResult searchResult = findTargetUser(session, memberDn);
+            SearchResult searchResult = findTargetEntry(session, sourceMemberEntry);
             if (searchResult == null) return;
 
             targetMemberDn = searchResult.getDn();
@@ -537,5 +1145,13 @@ public class IPAGroupModule extends Module {
         DeleteResponse deleteResponse = new DeleteResponse();
 
         target.delete(session, deleteRequest, deleteResponse);
+    }
+
+    public LDAPSource getSource() {
+        return source;
+    }
+
+    public void setSource(LDAPSource source) {
+        this.source = source;
     }
 }
