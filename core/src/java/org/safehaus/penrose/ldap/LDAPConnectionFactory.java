@@ -49,7 +49,7 @@ public class LDAPConnectionFactory {
         init();
     }
 
-    public void init() {
+    public void init() throws Exception {
         for (String attribute : LDAPClient.DEFAULT_BINARY_ATTRIBUTES) {
             binaryAttributes.add(attribute.toLowerCase());
         }

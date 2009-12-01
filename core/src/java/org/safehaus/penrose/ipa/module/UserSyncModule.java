@@ -223,8 +223,8 @@ public class UserSyncModule extends Module {
         SearchResult targetEntry = searchTargetUser(session, sourceEntry);
 
         if (targetEntry == null) {
-            if (log.isInfoEnabled()) log.info("Importing "+sourceDn);
-            targetEntry = importUser(session, sourceEntry);
+            if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
+            targetEntry = addUser(session, sourceEntry);
 
         } else {
             Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
@@ -268,21 +268,29 @@ public class UserSyncModule extends Module {
 
         if (linkAttribute != null) {
             SearchResult targetEntry = searchTargetUser(session, sourceEntry);
-            if (log.isInfoEnabled()) log.info("Unlinking "+(targetEntry == null ? null : targetEntry.getDn()));
-            unlinkUser(session, sourceEntry, targetEntry);
+            if (targetEntry != null) {
+                DN targetDn = targetEntry.getDn();
+                if (log.isInfoEnabled()) log.info("Deleting "+targetDn);
+                target.delete(session, targetDn);
+            }
         }
 
         source.delete(session, sourceDn);
     }
 
-    public SearchResult importUser(Session session, SearchResult sourceEntry) throws Exception {
-
+    public SearchResult addUser(Session session, SearchResult sourceEntry) throws Exception {
         DN sourceDn = sourceEntry.getDn();
-        String normalizedSourceDn = sourceDn.getNormalizedDn();
         Attributes sourceAttributes = sourceEntry.getAttributes();
 
+        return addUser(session, sourceDn, sourceAttributes);
+    }
+
+    public SearchResult addUser(Session session, DN sourceDn, Attributes sourceAttributes) throws Exception {
+
+        String normalizedSourceDn = sourceDn.getNormalizedDn();
+
         log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("IMPORT USER", 60));
+        log.debug(TextUtil.displayLine("ADD USER", 60));
         log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
         log.debug(TextUtil.displaySeparator(60));
 
@@ -471,6 +479,57 @@ public class UserSyncModule extends Module {
         }
     }
 
+    public void modifyUser(Session session, DN sourceDn, Collection<Modification> modifications) throws Exception {
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("MODIFY USER", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        Object userPassword = null;
+        DN modifiersName = null;
+
+        for (Modification modification : modifications) {
+            Attribute attribute = modification.getAttribute();
+            String attributeName = attribute.getName();
+
+            String op = LDAP.getModificationOperation(modification.getType());
+            log.debug(" - " + op + ": " + attributeName + " => " + attribute.getValues());
+
+            if ("unhashed#user#password".equals(attributeName)) {
+                userPassword = attribute.getValue();
+
+            } else if ("modifiersName".equalsIgnoreCase(attributeName)) {
+                modifiersName = new DN(attribute.getValue().toString());
+            }
+        }
+
+        log.debug("");
+
+        if (modifiersName != null && modifiersName.matches("cn=ipa-memberof,cn=plugins,cn=config")) {
+            log.debug("Skipping changes by ipa-memberof plugin.");
+            return;
+        }
+
+        if (userPassword == null) return;
+
+        SearchResult sourceEntry = source.find(session, sourceDn);
+        SearchResult targetEntry = getLinkedUser(session, sourceEntry);
+        if (targetEntry == null) return;
+
+        ModifyRequest modifyRequest = new ModifyRequest();
+        modifyRequest.setDn(targetEntry.getDn());
+
+        modifyRequest.addModification(new Modification(
+                Modification.REPLACE,
+                new Attribute("userPassword", userPassword)
+        ));
+
+        ModifyResponse modifyResponse = new ModifyResponse();
+
+        target.modify(session, modifyRequest, modifyResponse);
+    }
+
     public void unlinkUser(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
 
         DN sourceDn = sourceEntry.getDn();
@@ -549,30 +608,37 @@ public class UserSyncModule extends Module {
         return sourceResponse.next();
     }
 
-    public SearchResult searchTargetUser(Session session, SearchResult sourceEntry) throws Exception {
-
-        SearchResult targetEntry = null;
+    public SearchResult getLinkedUser(Session session, SearchResult sourceEntry) throws Exception {
 
         Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
-        if (linkAttribute != null) {
+        if (linkAttribute == null) return null;
 
-            Object link = linkAttribute.getValue();
-            Filter filter = new SimpleFilter(targetLinkAttribute, "=", link);
+        return getLinkedUser(session, linkAttribute.getValue());
+    }
 
-            if (log.isInfoEnabled()) log.info("Searching target for "+filter);
+    public SearchResult getLinkedUser(Session session, Object link) throws Exception {
+    
+        Filter filter = new SimpleFilter(targetLinkAttribute, "=", link);
+        if (log.isInfoEnabled()) log.info("Searching target for "+filter);
 
-            SearchRequest targetRequest = new SearchRequest();
-            targetRequest.setFilter(filter);
+        SearchRequest targetRequest = new SearchRequest();
+        targetRequest.setFilter(filter);
 
-            SearchResponse targetResponse = new SearchResponse();
+        SearchResponse targetResponse = new SearchResponse();
 
-            targetUsers.search(session, targetRequest, targetResponse);
+        targetUsers.search(session, targetRequest, targetResponse);
 
-            if (targetResponse.hasNext()) {
-                targetEntry = targetResponse.next();
-                if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
-            }
-        }
+        if (!targetResponse.hasNext()) return null;
+
+        SearchResult targetEntry = targetResponse.next();
+        if (log.isInfoEnabled()) log.info("Found target: "+targetEntry.getDn());
+
+        return targetEntry;
+    }
+
+    public SearchResult searchTargetUser(Session session, SearchResult sourceEntry) throws Exception {
+
+        SearchResult targetEntry = getLinkedUser(session, sourceEntry);
 
         if (targetEntry == null) {
 

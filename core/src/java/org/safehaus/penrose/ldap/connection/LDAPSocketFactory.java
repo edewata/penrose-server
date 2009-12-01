@@ -5,10 +5,14 @@ import com.novell.ldap.LDAPUrl;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
+import java.io.File;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.ArrayList;
+
+import org.newsclub.net.unix.AFUNIXSocket;
+import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 /**
  * @author Endi Sukma Dewata
@@ -18,18 +22,26 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
     protected Collection<LDAPUrl> urls;
     protected Integer timeout;
 
-    protected SocketFactory factory;
+    protected SocketFactory sslSocketFactory;
 
-    public LDAPSocketFactory(LDAPUrl url) {
+    public LDAPSocketFactory() throws Exception {
+        this(new ArrayList<LDAPUrl>());
+    }
+
+    public LDAPSocketFactory(String url) throws Exception {
+        this(new LDAPUrl(url));
+    }
+
+    public LDAPSocketFactory(LDAPUrl url) throws Exception {
         urls = new ArrayList<LDAPUrl>();
         urls.add(url);
 
-        factory = SSLSocketFactory.getDefault();
+        sslSocketFactory = SSLSocketFactory.getDefault();
     }
 
-    public LDAPSocketFactory(Collection<LDAPUrl> urls) {
+    public LDAPSocketFactory(Collection<LDAPUrl> urls) throws Exception {
         this.urls = urls;
-        factory = SSLSocketFactory.getDefault();
+        sslSocketFactory = SSLSocketFactory.getDefault();
     }
 
     public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
@@ -62,8 +74,14 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
         return new Socket(host, port);
     }
 
+    public Socket createUnixDomainSocket(File file) throws IOException, UnknownHostException {
+        AFUNIXSocket socket = AFUNIXSocket.newInstance();
+        socket.connect(new AFUNIXSocketAddress(file));
+        return socket;
+    }
+
     public Socket createSecureSocket(String host, int port) throws IOException, UnknownHostException {
-        return factory.createSocket(host, port);
+        return sslSocketFactory.createSocket(host, port);
     }
 
     public Integer getTimeout() {

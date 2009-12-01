@@ -2,12 +2,25 @@
  Copyright 2009 Red Hat, Inc.
  All rights reserved.
 -->
-<project name="jdbc">
+<project name="samba" default="build">
 
     <property name="test.hostname" value="localhost"/>
     <property name="test.port" value="10389"/>
     <property name="test.bindDn" value="uid=admin,ou=system"/>
     <property name="test.password" value="secret"/>
+
+    <path id="lib.path">
+        <fileset dir="../../lib">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+
+    <path id="main.path">
+        <fileset dir="../../lib">
+            <include name="**/*.jar"/>
+        </fileset>
+        <pathelement location="target/classes"/>
+    </path>
 
     <target name="test-search">
         <exec executable="ldapsearch">
@@ -52,6 +65,30 @@
             <arg line="-x"/>
             <arg line="-f ldif/add.ldif"/>
         </exec>
+    </target>
+
+    <target name="build">
+        <mkdir dir="target/classes"/>
+        <javac
+            srcdir="src"
+            destdir="target/classes"
+            classpathref="lib.path"
+            debug="on"
+            debuglevel="lines,vars,source"
+            source="1.5"
+            target="1.5"
+        />
+    </target>
+
+    <target name="run">
+        <java
+            classname="org.safehaus.penrose.samba.test.ClearTextPassword"
+            classpathref="main.path">
+        </java>
+    </target>
+
+    <target name="clean">
+        <delete dir="target"/>
     </target>
 
 </project>

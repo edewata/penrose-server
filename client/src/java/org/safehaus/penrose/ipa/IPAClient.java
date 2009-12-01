@@ -59,7 +59,19 @@ public class IPAClient {
         Iterator<String> iterator = parameters.iterator();
 
         String command = iterator.next();
-        if ("sync".equals(command)) {
+        if ("start".equals(command)) {
+            start(partition);
+
+        } else if ("stop".equals(command)) {
+            stop(partition);
+
+        } else if ("reset".equals(command)) {
+            reset(partition);
+
+        } else if ("sync".equals(command)) {
+            sync(partition);
+
+        } else if ("sync-all".equals(command)) {
             syncAll(partition);
 
         } else if ("sync-users".equals(command)) {
@@ -134,6 +146,42 @@ public class IPAClient {
         } else {
             throw new Exception("Unknown command: "+command);
         }
+    }
+
+    public void start(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("ChangeLogMonitorModule");
+
+        moduleClient.invoke("start");
+    }
+
+    public void stop(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("ChangeLogMonitorModule");
+
+        moduleClient.invoke("stop");
+    }
+
+    public void reset(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("ChangeLogMonitorModule");
+
+        moduleClient.invoke("reset");
+    }
+
+    public void sync(String partition) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("ChangeLogMonitorModule");
+
+        moduleClient.invoke("sync");
     }
 
     public void syncAll(String partition) throws Exception {
@@ -356,7 +404,7 @@ public class IPAClient {
         PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
         PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
         ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
-        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPAModule");
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPAHostModule");
 
         moduleClient.invoke("syncHosts");
     }

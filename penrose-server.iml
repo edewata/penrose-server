@@ -26,6 +26,7 @@
       <sourceFolder url="file://$MODULE_DIR$/samples/lockout/DIR-INF/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/samples/module/DIR-INF/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/samples/samba/DIR-INF/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/samples/samba/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/samples/scheduler/DIR-INF/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/samples/tomcat/WEB-INF/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/server/src/java" isTestSource="false" />
@@ -92,6 +93,7 @@
         <jarDirectory url="file://$MODULE_DIR$/services/LDAP/SERVICE-INF/lib" recursive="false" />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="JCIFS" level="project" />
     <orderEntry type="module-library" exported="">
       <library name="Penrose">
         <CLASSES>
@@ -110,7 +112,6 @@
         <jarDirectory url="file://$MODULE_DIR$/server/lib" recursive="false" />
       </library>
     </orderEntry>
-    <orderEntryProperties />
   </component>
 </module>
 

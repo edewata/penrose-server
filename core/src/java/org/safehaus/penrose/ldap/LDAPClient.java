@@ -732,7 +732,7 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
                     for (LDAPControl control : responseControls) {
                         log.debug(" - "+control.getID());
 
-                        if (control.getID().equals(PagedResultsControl.OID)) {
+                        if (pagedResultsRequestControl != null && control.getID().equals(PagedResultsControl.OID)) {
                             PagedResultsControl pagedResultsResponseControl = new PagedResultsControl(
                                     control.getID(),
                                     control.getValue(),
