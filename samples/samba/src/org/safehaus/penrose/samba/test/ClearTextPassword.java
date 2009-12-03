@@ -1,7 +1,6 @@
 package org.safehaus.penrose.samba.test;
 
 import org.safehaus.penrose.ldap.*;
-import org.safehaus.penrose.util.BinaryUtil;
 import org.safehaus.penrose.ad.SupplementalCredentialsUtil;
 import org.safehaus.penrose.ad.SupplementalCredentials;
 import org.safehaus.penrose.ad.SupplementalCredentialsPackage;
@@ -17,12 +16,26 @@ public class ClearTextPassword {
 
     public static void main(String args[]) throws Exception {
 
+        if (args.length != 4) {
+            System.out.println("Usage:");
+            System.out.println("    org.safehaus.penrose.samba.test.ClearTextPassword <URL> <Bind DN> <Password> <Target DN>");
+            System.exit(0);
+        }
+
+        String url          = args[0];
+        String bindDn       = args[1];
+        String bindPassword = args[2];
+        String targetDn     = args[3];
+
+        System.out.println("URL           : "+url);
+        System.out.println("Bind DN       : "+bindDn);
+        System.out.println("Bind Password : "+bindPassword);
+        System.out.println("Target DN     : "+targetDn);
+
         Map<String,String> parameters = new HashMap<String,String>();
-        parameters.put(Context.PROVIDER_URL, "ldap://192.168.5.102:10389");
-        parameters.put(Context.SECURITY_PRINCIPAL, "CN=Manager,DC=samba,DC=example,DC=com");
-        parameters.put(Context.SECURITY_CREDENTIALS, "Secret123");
-        //parameters.put(Context.SECURITY_PRINCIPAL, "CN=Administrator,CN=Users,DC=samba,DC=example,DC=com");
-        //parameters.put(Context.SECURITY_CREDENTIALS, "localdcpass");
+        parameters.put(Context.PROVIDER_URL, url);
+        parameters.put(Context.SECURITY_PRINCIPAL, bindDn);
+        parameters.put(Context.SECURITY_CREDENTIALS, bindPassword);
         parameters.put("java.naming.ldap.attributes.binary", "supplementalCredentials");
 
         LDAPConnectionFactory connectionFactory = new LDAPConnectionFactory(parameters);
@@ -32,7 +45,7 @@ public class ClearTextPassword {
         client.connect();
 
         SearchRequest request = new SearchRequest();
-        request.setDn("cn=Test User,cn=Users,dc=samba,dc=example,dc=com");
+        request.setDn(targetDn);
         request.setScope(SearchRequest.SCOPE_BASE);
         request.setAttributes(new String[] { "supplementalCredentials" });
 

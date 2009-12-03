@@ -139,6 +139,11 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
         connection.setConstraints(constraints);
     }
 
+    public LDAPAuthProvider getAuthProvider(com.novell.ldap.LDAPUrl url) {
+        log.debug("Creating authentication provider.");
+        return new LDAPAuthProvider(bindDn, bindPassword);
+    }
+
     public LDAPAuthProvider getAuthProvider(String host, int port) {
         log.debug("Creating authentication provider.");
         return new LDAPAuthProvider(bindDn, bindPassword);

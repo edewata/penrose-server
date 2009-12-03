@@ -54,6 +54,7 @@
     </content>
     <orderEntry type="jdk" jdkName="1.5" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="jldap" exported="" />
     <orderEntry type="module-library">
       <library>
         <CLASSES>

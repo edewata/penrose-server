@@ -63,12 +63,10 @@ public class LDAPMonitor extends PollingMonitor {
         try {
             log.debug("Connecting to "+url+".");
             
-            String host = url.getHost();
-            int port = url.getPort();
             String baseDn = url.getDN();
 
             LDAPConnection connection = new LDAPConnection();
-            connection.connect(host, port);
+            connection.connect(url);
 
             if (bindDn != null && bindPassword != null) {
                 log.debug("Binding as "+bindDn+".");

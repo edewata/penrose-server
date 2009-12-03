@@ -1,7 +1,7 @@
 package org.safehaus.penrose.ldap;
 
 import org.ietf.ldap.LDAPException;
-import com.novell.ldap.LDAPUrl;
+import org.ietf.ldap.LDAPUrl;
 import org.safehaus.penrose.ldap.connection.LDAPSocketFactory;
 import org.safehaus.penrose.ldap.connection.LDAPConnection;
 import org.slf4j.Logger;
@@ -117,7 +117,7 @@ public class LDAPConnectionFactory {
         LDAPException exception = null;
         for (LDAPUrl url : urls) {
             try {
-                connection.connect(url.getHost(), url.getPort());
+                connection.connect(url);
                 log.debug("Connected to "+url+".");
                 break;
 

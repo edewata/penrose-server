@@ -1,18 +1,17 @@
 package org.safehaus.penrose.ldap.connection;
 
-import com.novell.ldap.LDAPUrl;
-
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.File;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.URL;
 import java.util.Collection;
 import java.util.ArrayList;
 
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
+import org.ietf.ldap.LDAPUrl;
 
 /**
  * @author Endi Sukma Dewata
@@ -44,7 +43,7 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
         sslSocketFactory = SSLSocketFactory.getDefault();
     }
 
-    public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
+    public Socket createSocket(String host, int port) throws IOException {
 
         Socket socket = null;
 
@@ -53,7 +52,7 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
             int urlPort = url.getPort();
 
             if (host.equals(urlHost) && port == urlPort) {
-                if (url.isSecure()) {
+                if (url.getScheme().equals("ldaps")) {
                     socket = createSecureSocket(host, port);
                 } else {
                     socket = createRegularSocket(host, port);
@@ -70,17 +69,17 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
         return socket;
     }
 
-    public Socket createRegularSocket(String host, int port) throws IOException, UnknownHostException {
+    public Socket createRegularSocket(String host, int port) throws IOException {
         return new Socket(host, port);
     }
 
-    public Socket createUnixDomainSocket(File file) throws IOException, UnknownHostException {
+    public Socket createUnixDomainSocket(File file) throws IOException {
         AFUNIXSocket socket = AFUNIXSocket.newInstance();
         socket.connect(new AFUNIXSocketAddress(file));
         return socket;
     }
 
-    public Socket createSecureSocket(String host, int port) throws IOException, UnknownHostException {
+    public Socket createSecureSocket(String host, int port) throws IOException {
         return sslSocketFactory.createSocket(host, port);
     }
 
