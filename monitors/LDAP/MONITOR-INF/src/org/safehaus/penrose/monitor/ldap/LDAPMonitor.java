@@ -66,7 +66,7 @@ public class LDAPMonitor extends PollingMonitor {
             String baseDn = url.getDN();
 
             LDAPConnection connection = new LDAPConnection();
-            connection.connect(url);
+            connection.connect(url.getHost(), url.getPort());
 
             if (bindDn != null && bindPassword != null) {
                 log.debug("Binding as "+bindDn+".");

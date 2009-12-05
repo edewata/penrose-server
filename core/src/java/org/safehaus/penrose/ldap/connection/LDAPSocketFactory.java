@@ -5,18 +5,18 @@ import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.File;
 import java.net.Socket;
-import java.net.URL;
 import java.util.Collection;
 import java.util.ArrayList;
 
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.ietf.ldap.LDAPUrl;
+import org.safehaus.penrose.jldap.LDAPIUrl;
 
 /**
  * @author Endi Sukma Dewata
  */
-public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
+public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory, com.novell.ldap.LDAPSocketFactory {
 
     protected Collection<LDAPUrl> urls;
     protected Integer timeout;
@@ -48,14 +48,21 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
         Socket socket = null;
 
         for (LDAPUrl url : urls) {
-            String urlHost = url.getHost();
-            int urlPort = url.getPort();
 
-            if (host.equals(urlHost) && port == urlPort) {
-                if (url.getScheme().equals("ldaps")) {
-                    socket = createSecureSocket(host, port);
-                } else {
-                    socket = createRegularSocket(host, port);
+            if (url instanceof LDAPIUrl) {
+                LDAPIUrl ldapiUrl = (LDAPIUrl)url;
+                socket = createUnixDomainSocket(ldapiUrl.getPath());
+
+            } else {
+                String urlHost = url.getHost();
+                int urlPort = url.getPort();
+
+                if (host.equals(urlHost) && port == urlPort) {
+                    if (url.toString().startsWith("ldap://")) {
+                        socket = createSecureSocket(host, port);
+                    } else {
+                        socket = createRegularSocket(host, port);
+                    }
                 }
             }
         }
@@ -73,9 +80,9 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory {
         return new Socket(host, port);
     }
 
-    public Socket createUnixDomainSocket(File file) throws IOException {
+    public Socket createUnixDomainSocket(String path) throws IOException {
         AFUNIXSocket socket = AFUNIXSocket.newInstance();
-        socket.connect(new AFUNIXSocketAddress(file));
+        socket.connect(new AFUNIXSocketAddress(new File(path)));
         return socket;
     }
 

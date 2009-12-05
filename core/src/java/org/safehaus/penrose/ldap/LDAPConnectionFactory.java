@@ -4,6 +4,7 @@ import org.ietf.ldap.LDAPException;
 import org.ietf.ldap.LDAPUrl;
 import org.safehaus.penrose.ldap.connection.LDAPSocketFactory;
 import org.safehaus.penrose.ldap.connection.LDAPConnection;
+import org.safehaus.penrose.jldap.LDAPIUrl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +99,12 @@ public class LDAPConnectionFactory {
     public void parseUrl(String url) throws Exception {
         for (StringTokenizer st = new StringTokenizer(url); st.hasMoreTokens(); ) {
             String token = st.nextToken();
-            LDAPUrl ldapUrl = new LDAPUrl(token);
+            LDAPUrl ldapUrl;
+            if (token.startsWith("ldapi://")) {
+                ldapUrl = new LDAPIUrl(token);
+            } else {
+                ldapUrl = new LDAPUrl(token);
+            }
             urls.add(ldapUrl);
         }
     }
@@ -117,7 +123,7 @@ public class LDAPConnectionFactory {
         LDAPException exception = null;
         for (LDAPUrl url : urls) {
             try {
-                connection.connect(url);
+                connection.connect(url.getHost(), url.getPort());
                 log.debug("Connected to "+url+".");
                 break;
 
