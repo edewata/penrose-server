@@ -85,7 +85,8 @@
         <java
             classname="org.safehaus.penrose.samba.test.ClearTextPassword"
             classpathref="main.path">
-            <arg value="ldapi://%2Froot%2FSamba%2Fsamba%2Fsource4%2Fst%2Fdc%2Fprivate%2Fldap%2Fldapi"/>
+            <sysproperty key="java.library.path" value="../../lib"/>
+            <arg value="ldapi://%2Fusr%2Flocal%2Fsamba%2Fprivate%2Fldap%2Fldapi"/>
             <arg value="CN=Manager,DC=samba,DC=example,DC=com"/>
             <arg value="Secret123"/>
             <arg value="cn=Test User,cn=Users,dc=samba,dc=example,dc=com"/>
