@@ -5,7 +5,13 @@
 
 <partition>
 
-  <mapping-file>DIR-INF/mappings-user.xml</mapping-file>
-  <mapping-file>DIR-INF/mappings-group.xml</mapping-file>
+  <source-file>DIR-INF/sources-ipa.xml</source-file>
+  <source-file>DIR-INF/sources-samba.xml</source-file>
+  <source-file>DIR-INF/sources-changelog.xml</source-file>
+
+  <mapping-file>DIR-INF/mappings-samba-user.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-samba-group.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-ipa-user.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-ipa-group.xml</mapping-file>
 
 </partition>

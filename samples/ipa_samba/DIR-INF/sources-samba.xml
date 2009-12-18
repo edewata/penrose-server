@@ -5,72 +5,6 @@
 
 <sources>
 
-  <source name="ipa">
-    <connection-name>IPA</connection-name>
-    <parameter>
-      <param-name>baseDn</param-name>
-      <param-value>dc=example,dc=com</param-value>
-    </parameter>
-  </source>
-
-  <source name="ipa_users">
-    <connection-name>IPA</connection-name>
-    <parameter>
-      <param-name>baseDn</param-name>
-      <param-value>cn=users,cn=accounts,dc=example,dc=com</param-value>
-    </parameter>
-    <parameter>
-      <param-name>scope</param-name>
-      <param-value>ONELEVEL</param-value>
-    </parameter>
-  </source>
-
-  <source name="ipa_groups">
-    <connection-name>IPA</connection-name>
-    <parameter>
-      <param-name>baseDn</param-name>
-      <param-value>cn=groups,cn=accounts,dc=example,dc=com</param-value>
-    </parameter>
-    <parameter>
-      <param-name>scope</param-name>
-      <param-value>ONELEVEL</param-value>
-    </parameter>
-  </source>
-
-  <source name="ipa_hosts">
-    <connection-name>IPA</connection-name>
-    <parameter>
-      <param-name>baseDn</param-name>
-      <param-value>cn=hosts,cn=accounts,dc=example,dc=com</param-value>
-    </parameter>
-    <parameter>
-      <param-name>scope</param-name>
-      <param-value>ONELEVEL</param-value>
-    </parameter>
-  </source>
-
-  <source name="ipa_changelog">
-    <connection-name>IPA</connection-name>
-    <parameter>
-      <param-name>baseDn</param-name>
-      <param-value>cn=changelog</param-value>
-    </parameter>
-  </source>
-
-  <source name="ipa_tracker">
-    <connection-name>Database</connection-name>
-    <field name="changeNumber" type="INTEGER" primaryKey="true"/>
-    <field name="changeTimestamp" type="DATETIME"/>
-    <parameter>
-      <param-name>table</param-name>
-      <param-value>ipa_tracker</param-value>
-    </parameter>
-    <parameter>
-      <param-name>create</param-name>
-      <param-value>true</param-value>
-    </parameter>
-  </source>
-
   <source name="sambaFE">
     <connection-name>SambaFE</connection-name>
     <parameter>
@@ -148,3 +82,4 @@
   </source>
 
 </sources>
+

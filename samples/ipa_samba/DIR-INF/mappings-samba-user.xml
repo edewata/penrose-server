@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mappings PUBLIC
+  "-//Penrose/DTD Mappings ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/mappings.dtd">
+
+<mappings>
+
+  <mapping name="ImportSambaUser">
+
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
+    </rule>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>samba.lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>samba.scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>samba.profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>samba.logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>samba.badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>samba.primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <constant>samba.userAccountControl</constant>
+    </rule>
+
+  </mapping>
+
+  <mapping name="LinkSambaUser">
+
+    <rule name="sn">
+      <variable>ipa.sn</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <variable>ipa.homeDirectory</variable>
+    </rule>
+
+    <rule name="accountExpires">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (ipa.krbPasswordExpiration == void || ipa.krbPasswordExpiration == null) return null;
+return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbPasswordExpiration));
+      </expression>
+    </rule>
+    <rule name="pwdLastSet">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (ipa.krbLastPwdChange == void || ipa.krbLastPwdChange == null) return null;
+return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
+      </expression>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UnlinkSambaUser">
+
+  </mapping>
+
+</mappings>

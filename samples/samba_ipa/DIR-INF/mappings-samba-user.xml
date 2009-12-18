@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mappings PUBLIC
+  "-//Penrose/DTD Mappings ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/mappings.dtd">
+
+<mappings>
+
+  <mapping name="LoadSambaLinkAttribute">
+    <rule name="guid">
+      <expression>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId == void || samba.nsUniqueId == null) return null;
+return Samba.toBinaryGUID(samba.nsUniqueId);
+      </expression>
+    </rule>
+  </mapping>
+
+  <mapping name="ImportSambaUser">
+
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
+    <rule name="dn">
+      <expression>
+return "uid="+samba.sAMAccountName+",cn=users,cn=accounts";
+      </expression>
+    </rule>
+
+    <rule name="objectClass">
+      <constant>person</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>organizationalPerson</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>inetOrgPerson</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>inetUser</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>posixAccount</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>krbPrincipalAux</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>radiusProfile</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>ipaObject</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="cn">
+      <variable>samba.cn</variable>
+    </rule>
+    <rule name="sn">
+      <expression>
+if (samba.sn != void &amp;&amp; samba.sn != null) return samba.sn;
+if (samba.cn == void || samba.cn == null) return null;
+var i = samba.cn.lastIndexOf(' ');
+return i >= 0 ? samba.cn.substring(i+1) : samba.cn;
+      </expression>
+    </rule>
+    <rule name="uid">
+      <variable>samba.sAMAccountName</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <expression>
+if (samba.homeDirectory == void || samba.homeDirectory == null) return "/tmp";
+return samba.homeDirectory;
+      </expression>
+    </rule>
+    <rule name="gidNumber">
+      <constant>0</constant>
+    </rule>
+
+    <rule name="krbPrincipalName">
+      <expression>
+if (samba.sAMAccountName == void || samba.sAMAccountName == null) return samba.sn+"@example.com";
+return samba.sAMAccountName+"@EXAMPLE.COM";
+      </expression>
+    </rule>
+    <rule name="krbPasswordExpiration">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (samba.accountExpires == void || samba.accountExpires == null) return null;
+if (samba.accountExpires.equals("0") || samba.accountExpires.equals(""+ActiveDirectory.MAX_TIMESTAMP)) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(samba.accountExpires));
+      </expression>
+    </rule>
+    <rule name="krbLastPwdChange">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (samba.pwdLastSet == void || samba.pwdLastSet == null) return null;
+if (samba.pwdLastSet.equals("0")) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(samba.pwdLastSet));
+      </expression>
+    </rule>
+
+    <rule name="ipaUniqueId">
+      <expression>
+import org.safehaus.penrose.ipa.*;
+return IPA.generateIPAUniqueId(samba.objectGUID);
+      </expression>
+    </rule>
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
+    </rule>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>samba.lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>samba.scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>samba.profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>samba.logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>samba.badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>samba.primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <variable>samba.userAccountControl</variable>
+    </rule>
+    <rule name="userPassword">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.getClearTextPassword(samba.supplementalCredentials);
+      </expression>
+    </rule>
+
+  </mapping>
+
+  <mapping name="LinkSambaUser">
+
+    <rule name="cn">
+      <variable>ipa.cn</variable>
+    </rule>
+    <rule name="sn">
+      <variable>ipa.sn</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <variable>ipa.homeDirectory</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="SyncSambaUser">
+
+    <rule name="cn">
+      <variable>cn</variable>
+    </rule>
+    <rule name="sn">
+      <expression>
+if (samba.sn != void &amp;&amp; samba.sn != null) return samba.sn;
+if (samba.cn == void || samba.cn == null) return null;
+var i = samba.cn.lastIndexOf(' ');
+return i >= 0 ? samba.cn.substring(i+1) : samba.cn;
+      </expression>
+    </rule>
+    <rule name="homeDirectory">
+      <expression>
+if (samba.homeDirectory == void || samba.homeDirectory == null) return "/tmp";
+return samba.homeDirectory;
+      </expression>
+    </rule>
+
+    <rule name="krbPasswordExpiration">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (samba.accountExpires == void || samba.accountExpires == null) return null;
+if (samba.accountExpires.equals("0") || samba.accountExpires.equals(""+ActiveDirectory.MAX_TIMESTAMP)) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(samba.accountExpires));
+      </expression>
+    </rule>
+    <rule name="krbLastPwdChange">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (samba.pwdLastSet == void || samba.pwdLastSet == null) return null;
+if (samba.pwdLastSet.equals("0")) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(samba.pwdLastSet));
+      </expression>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>samba.lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>samba.scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>samba.profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>samba.logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>samba.badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>samba.primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <variable>samba.userAccountControl</variable>
+    </rule>
+
+  </mapping>
+
+</mappings>

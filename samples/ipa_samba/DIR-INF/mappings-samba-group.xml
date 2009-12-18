@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mappings PUBLIC
+  "-//Penrose/DTD Mappings ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/mappings.dtd">
+
+<mappings>
+
+  <mapping name="ImportIPAGroup2">
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="objectGUID">
+      <variable>samba.objectGUID</variable>
+    </rule>
+    <rule name="objectSid">
+      <variable>samba.objectSid</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="SyncIPAGroup2">
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="objectGUID">
+      <variable>samba.objectGUID</variable>
+    </rule>
+    <rule name="objectSid">
+      <variable>samba.objectSid</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UnlinkIPAGroup2">
+
+    <rule name="objectClass" action="delete">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="objectGUID" action="delete"/>
+    <rule name="objectSid" action="delete"/>
+
+  </mapping>
+
+</mappings>

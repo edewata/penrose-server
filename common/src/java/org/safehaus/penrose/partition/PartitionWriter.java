@@ -98,6 +98,10 @@ public class PartitionWriter {
             element.add(createElement(adapterConfig));
         }
 
+        for (String sourceFile : partitionConfig.getSourceFiles()) {
+            element.add(createSourceFileElement(sourceFile));
+        }
+
         for (String mappingFile : partitionConfig.getMappingFiles()) {
             element.add(createMappingFileElement(mappingFile));
         }
@@ -174,6 +178,14 @@ public class PartitionWriter {
 
             element.add(parameter);
         }
+
+        return element;
+    }
+
+    public Element createSourceFileElement(String sourceFile) {
+
+        Element element = new DefaultElement("source-file");
+        element.add(new DefaultText(sourceFile));
 
         return element;
     }

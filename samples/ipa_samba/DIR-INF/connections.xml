@@ -9,7 +9,7 @@
     <adapter-name>LDAP</adapter-name>
     <parameter>
       <param-name>java.naming.provider.url</param-name>
-      <param-value>ldap://f12.example.com/</param-value>
+      <param-value>ldap://ipa.example.com/</param-value>
     </parameter>
     <parameter>
       <param-name>java.naming.security.principal</param-name>

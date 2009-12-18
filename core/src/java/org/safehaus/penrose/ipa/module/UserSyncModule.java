@@ -164,20 +164,29 @@ public class UserSyncModule extends Module {
     // Public Methods
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public Collection<SearchResult> getUsers() throws Exception {
+    public Map<String,SearchResult> getUsers() throws Exception {
         final Session session = createAdminSession();
 
         try {
+            final Map<String,SearchResult> map = new TreeMap<String,SearchResult>();
+
             SearchRequest sourceRequest = new SearchRequest();
 
-            SearchResponse sourceResponse = new SearchResponse();
+            SearchResponse sourceResponse = new SearchResponse() {
+                public void add(SearchResult result) throws Exception {
+                    Attribute attribute = result.getAttribute(sourceKeyAttribute);
+                    if (attribute == null) return;
+
+                    Object value = attribute.getValue();
+                    if (value == null) return;
+
+                    map.put(value.toString(), result);
+                }
+            };
 
             sourceUsers.search(session, sourceRequest, sourceResponse);
 
-            Collection<SearchResult> results = new ArrayList<SearchResult>();
-            results.addAll(sourceResponse.getResults());
-
-            return results;
+            return map;
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -583,7 +592,6 @@ public class UserSyncModule extends Module {
         log.debug(TextUtil.displaySeparator(60));
 
         Object userPassword = null;
-        DN modifiersName = null;
 
         for (Modification modification : modifications) {
             Attribute attribute = modification.getAttribute();
@@ -594,18 +602,10 @@ public class UserSyncModule extends Module {
 
             if ("unhashed#user#password".equals(attributeName)) {
                 userPassword = attribute.getValue();
-
-            } else if ("modifiersName".equalsIgnoreCase(attributeName)) {
-                modifiersName = new DN(attribute.getValue().toString());
             }
         }
 
         log.debug("");
-
-        if (modifiersName != null && modifiersName.matches("cn=ipa-memberof,cn=plugins,cn=config")) {
-            log.debug("Skipping changes by ipa-memberof plugin.");
-            return;
-        }
 
         if (userPassword == null) return;
 

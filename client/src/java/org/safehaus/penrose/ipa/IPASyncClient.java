@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author Endi Sukma Dewata
@@ -164,11 +165,12 @@ public class IPASyncClient {
         ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
         ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaUserModule");
 
-        Collection<SearchResult> results = (Collection<SearchResult>)moduleClient.invoke("getUsers");
+        Map<String,SearchResult> map = (Map<String,SearchResult>)moduleClient.invoke("getUsers");
 
         System.out.println("Users:");
-        for (SearchResult result : results) {
-            System.out.println(" - "+result.getDn());
+        for (String key : map.keySet()) {
+            SearchResult result = map.get(key);
+            System.out.println(" - "+key+": "+result.getDn());
         }
     }
 
@@ -193,11 +195,12 @@ public class IPASyncClient {
         ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
         ModuleClient moduleClient = moduleManagerClient.getModuleClient("IPASambaGroupModule");
 
-        Collection<SearchResult> results = (Collection<SearchResult>)moduleClient.invoke("getGroups");
+        Map<String,SearchResult> map = (Map<String,SearchResult>)moduleClient.invoke("getGroups");
 
         System.out.println("Groups:");
-        for (SearchResult result : results) {
-            System.out.println(" - "+result.getDn());
+        for (String key : map.keySet()) {
+            SearchResult result = map.get(key);
+            System.out.println(" - "+key+": "+result.getDn());
         }
     }
 

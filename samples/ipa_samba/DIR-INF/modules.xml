@@ -6,7 +6,7 @@
 <modules>
 
   <module name="IPASambaUserModule">
-    <module-class>org.safehaus.penrose.ipa.module.UserSyncModule</module-class>
+    <module-class>org.safehaus.penrose.ipa.module.IPASambaUserSyncModule</module-class>
     <parameter>
       <param-name>source</param-name>
       <param-value>ipa</param-value>

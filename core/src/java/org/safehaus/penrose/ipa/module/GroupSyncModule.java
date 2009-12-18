@@ -120,20 +120,29 @@ public class GroupSyncModule extends Module {
     // Public Methods
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public Collection<SearchResult> getGroups() throws Exception {
+    public Map<String,SearchResult> getGroups() throws Exception {
         final Session session = createAdminSession();
 
         try {
+            final Map<String,SearchResult> map = new TreeMap<String,SearchResult>();
+
             SearchRequest sourceRequest = new SearchRequest();
 
-            SearchResponse sourceResponse = new SearchResponse();
+            SearchResponse sourceResponse = new SearchResponse() {
+                public void add(SearchResult result) throws Exception {
+                    Attribute attribute = result.getAttribute(sourceKeyAttribute);
+                    if (attribute == null) return;
+
+                    Object value = attribute.getValue();
+                    if (value == null) return;
+
+                    map.put(value.toString(), result);
+                }
+            };
 
             sourceGroups.search(session, sourceRequest, sourceResponse);
 
-            Collection<SearchResult> results = new ArrayList<SearchResult>();
-            results.addAll(sourceResponse.getResults());
-
-            return results;
+            return map;
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);

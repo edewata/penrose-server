@@ -63,7 +63,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
             <set-next-rule methodname="setThreadManagerConfig" />
         </pattern>
 
+        <call-method-rule pattern="source-file" methodname="addSourceFile" paramcount="0" />
         <call-method-rule pattern="mapping-file" methodname="addMappingFile" paramcount="0" />
+        <call-method-rule pattern="module-file" methodname="addModuleFile" paramcount="0" />
 
         <pattern value="parameter">
             <call-method-rule methodname="setParameter" paramcount="2" />

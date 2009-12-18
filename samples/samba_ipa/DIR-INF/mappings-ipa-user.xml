@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mappings PUBLIC
+  "-//Penrose/DTD Mappings ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/mappings.dtd">
+
+<mappings>
+
+  <mapping name="StoreIPALinkAttribute">
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.ad.*;
+if (shared.guid == void || shared.guid == null) return null;
+return Samba.toStringGUID(shared.guid);
+      </expression>
+    </rule>
+  </mapping>
+
+  <mapping name="LinkIPAUser">
+
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="krbPasswordExpiration">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (samba.accountExpires == void || samba.accountExpires == null) return null;
+if (samba.accountExpires.equals("0") || samba.accountExpires.equals(""+ActiveDirectory.MAX_TIMESTAMP)) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(samba.accountExpires));
+      </expression>
+    </rule>
+    <rule name="krbLastPwdChange">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (samba.pwdLastSet == void || samba.pwdLastSet == null) return null;
+if (samba.pwdLastSet.equals("0")) return null;
+
+return IPA.toTimestamp(ActiveDirectory.toDate(samba.pwdLastSet));
+      </expression>
+    </rule>
+
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
+    </rule>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>samba.lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>samba.scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>samba.profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>samba.logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>samba.badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>samba.primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <variable>samba.userAccountControl</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="UnlinkIPAUser">
+
+    <rule name="objectClass" action="delete">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="ntUniqueId" action="delete"/>
+    <rule name="sambaSID" action="delete"/>
+
+    <rule name="lastLogon" action="delete"/>
+    <rule name="scriptPath" action="delete"/>
+    <rule name="profilePath" action="delete"/>
+    <rule name="logonCount" action="delete"/>
+    <rule name="badPwdCount" action="delete"/>
+    <rule name="primaryGroupID" action="delete"/>
+    <rule name="userAccountControl" action="delete"/>
+
+  </mapping>
+
+</mappings>

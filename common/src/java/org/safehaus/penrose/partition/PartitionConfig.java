@@ -61,6 +61,7 @@ public class PartitionConfig implements Serializable, Cloneable {
     protected ThreadManagerConfig     threadManagerConfig;
     protected SchedulerConfig         schedulerConfig;
 
+    protected Collection<String>      sourceFiles              = new ArrayList<String>();
     protected Collection<String>      mappingFiles             = new ArrayList<String>();
     protected Collection<String>      moduleFiles              = new ArrayList<String>();
 
@@ -219,6 +220,18 @@ public class PartitionConfig implements Serializable, Cloneable {
         depends.remove(depend);
     }
 
+    public Collection<String> getSourceFiles() {
+        return sourceFiles;
+    }
+
+    public void addSourceFile(String sourceFile) {
+        sourceFiles.add(sourceFile);
+    }
+
+    public void removeSourceFile(String sourceFile) {
+        sourceFiles.remove(sourceFile);
+    }
+
     public Collection<String> getMappingFiles() {
         return mappingFiles;
     }
@@ -274,6 +287,8 @@ public class PartitionConfig implements Serializable, Cloneable {
 
         if (!equals(threadManagerConfig, partitionConfig.threadManagerConfig)) return false;
         if (!equals(schedulerConfig, partitionConfig.schedulerConfig)) return false;
+
+        if (!equals(sourceFiles, partitionConfig.sourceFiles)) return false;
         if (!equals(mappingFiles, partitionConfig.mappingFiles)) return false;
         if (!equals(moduleFiles, partitionConfig.moduleFiles)) return false;
 
@@ -313,6 +328,9 @@ public class PartitionConfig implements Serializable, Cloneable {
 
         partitionConfig.threadManagerConfig = threadManagerConfig == null ? null : (ThreadManagerConfig)threadManagerConfig.clone();
         partitionConfig.schedulerConfig = schedulerConfig == null ? null : (SchedulerConfig)schedulerConfig.clone();
+
+        partitionConfig.sourceFiles = new ArrayList<String>();
+        partitionConfig.sourceFiles.addAll(sourceFiles);
 
         partitionConfig.mappingFiles = new ArrayList<String>();
         partitionConfig.mappingFiles.addAll(mappingFiles);

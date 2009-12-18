@@ -250,6 +250,10 @@ public class PartitionManager {
             sourceReader.read(sourcesXml, sourceConfigManager);
         }
 
+        for (String sourceFile : partitionConfig.getSourceFiles()) {
+            sourceReader.read(new File(partitionDir, sourceFile), sourceConfigManager);
+        }
+
         MappingConfigManager mappingConfigManager = partitionConfig.getMappingConfigManager();
         MappingReader mappingReader = new MappingReader();
 
