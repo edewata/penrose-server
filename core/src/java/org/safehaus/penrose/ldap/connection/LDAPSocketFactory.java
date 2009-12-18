@@ -12,11 +12,15 @@ import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.ietf.ldap.LDAPUrl;
 import org.safehaus.penrose.jldap.LDAPIUrl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Endi Sukma Dewata
  */
 public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory, com.novell.ldap.LDAPSocketFactory {
+
+    public Logger log = LoggerFactory.getLogger(getClass());
 
     protected Collection<LDAPUrl> urls;
     protected Integer timeout;
@@ -59,9 +63,9 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory, com.n
 
                 if (host.equals(urlHost) && port == urlPort) {
                     if (url.toString().startsWith("ldap://")) {
-                        socket = createSecureSocket(host, port);
-                    } else {
                         socket = createRegularSocket(host, port);
+                    } else {
+                        socket = createSecureSocket(host, port);
                     }
                 }
             }
@@ -76,17 +80,26 @@ public class LDAPSocketFactory implements org.ietf.ldap.LDAPSocketFactory, com.n
         return socket;
     }
 
-    public Socket createRegularSocket(String host, int port) throws IOException {
-        return new Socket(host, port);
-    }
-
     public Socket createUnixDomainSocket(String path) throws IOException {
+
+        log.debug("Creating unix domain socket to "+path+".");
+
         AFUNIXSocket socket = AFUNIXSocket.newInstance();
         socket.connect(new AFUNIXSocketAddress(new File(path)));
         return socket;
     }
 
+    public Socket createRegularSocket(String host, int port) throws IOException {
+
+        log.debug("Creating regular socket to "+host+":"+port+".");
+
+        return new Socket(host, port);
+    }
+
     public Socket createSecureSocket(String host, int port) throws IOException {
+
+        log.debug("Creating secure socket to "+host+":"+port+".");
+
         return sslSocketFactory.createSocket(host, port);
     }
 

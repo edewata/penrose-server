@@ -27,30 +27,30 @@ public class SupplementalCredentialsUtil {
         offset = align(offset, 4);
 
         int unknown1 = Encdec.dec_uint32le(buffer, offset);
-        System.out.printf("[%04X] Unknown1: %d\n", offset, unknown1);
+        // System.out.printf("[%04X] Unknown1: %d\n", offset, unknown1);
         offset +=4;
 
         sc.size = Encdec.dec_uint32le(buffer, offset);
-        System.out.printf("[%04X] Size: %04X\n", offset, sc.size);
+        // System.out.printf("[%04X] Size: %04X\n", offset, sc.size);
         offset +=4;
 
-        System.out.printf("[%04X] Unknown2: ", offset);
+        // System.out.printf("[%04X] Unknown2: ", offset);
         int unknown2 = Encdec.dec_uint32le(buffer, offset);
-        System.out.printf("%d\n", unknown2);
+        // System.out.printf("%d\n", unknown2);
         offset +=4;
 
         offset = align(offset, 3);
 
         sc.charset = new String(buffer, offset, 0x60, "UTF-16LE");
-        System.out.printf("[%04X] Charset: [%s]\n", offset, sc.charset);
+        // System.out.printf("[%04X] Charset: [%s]\n", offset, sc.charset);
         offset += 0x60;
 
         sc.signature = Encdec.dec_uint16le(buffer, offset);
-        System.out.printf("[%04X] Signature: %d\n", offset, sc.signature);
+        // System.out.printf("[%04X] Signature: %d\n", offset, sc.signature);
         offset +=2;
 
         int packages = Encdec.dec_uint16le(buffer, offset);
-        System.out.printf("[%04X] Packages: %d\n", offset, packages);
+        // System.out.printf("[%04X] Packages: %d\n", offset, packages);
         offset +=2;
 
         for (int i=0; i<packages; i++) {
@@ -62,7 +62,7 @@ public class SupplementalCredentialsUtil {
         offset = align(offset, 3);
 
         int unknown3 = buffer[offset];
-        System.out.printf("[%04X] Unknown3: %d\n", offset, unknown3);
+        // System.out.printf("[%04X] Unknown3: %d\n", offset, unknown3);
         offset +=1;
 
         offset = align(offset, 4);
@@ -74,28 +74,28 @@ public class SupplementalCredentialsUtil {
 
         offset = align(offset, 2);
 
-        System.out.printf("[%04X] Name length: ", offset);
+        // System.out.printf("[%04X] Name length: ", offset);
         int nameLength = Encdec.dec_uint16le(buffer, offset);
-        System.out.printf("%04X\n", nameLength);
+        // System.out.printf("%04X\n", nameLength);
         offset +=2;
 
-        System.out.printf("[%04X] Data length: ", offset);
+        // System.out.printf("[%04X] Data length: ", offset);
         int dataLength = Encdec.dec_uint16le(buffer, offset);
-        System.out.printf("%04X\n", dataLength);
+        // System.out.printf("%04X\n", dataLength);
         offset +=2;
 
-        System.out.printf("[%04X] Reserved: ", offset);
+        // System.out.printf("[%04X] Reserved: ", offset);
         int reserved = Encdec.dec_uint16le(buffer, offset);
-        System.out.printf("%d\n", reserved);
+        // System.out.printf("%d\n", reserved);
         offset +=2;
 
         scp.name = new String(buffer, offset, nameLength, "UTF-16LE");
-        System.out.printf("[%04X] Name: %s\n", offset, scp.name);
+        // System.out.printf("[%04X] Name: %s\n", offset, scp.name);
         offset += nameLength;
 
         String data = new String(buffer, offset, dataLength);
         scp.data = BinaryUtil.decode(BinaryUtil.BIG_INTEGER, data);
-        System.out.printf("[%04X] Data: %s\n", offset, data);
+        // System.out.printf("[%04X] Data: %s\n", offset, data);
         offset += dataLength;
 
         offset = align(offset, 2);

@@ -62,6 +62,7 @@ public class PartitionConfig implements Serializable, Cloneable {
     protected SchedulerConfig         schedulerConfig;
 
     protected Collection<String>      mappingFiles             = new ArrayList<String>();
+    protected Collection<String>      moduleFiles              = new ArrayList<String>();
 
     public PartitionConfig() {
     }
@@ -230,6 +231,18 @@ public class PartitionConfig implements Serializable, Cloneable {
         mappingFiles.remove(mappingFile);
     }
 
+    public Collection<String> getModuleFiles() {
+        return moduleFiles;
+    }
+
+    public void addModuleFile(String moduleFile) {
+        moduleFiles.add(moduleFile);
+    }
+
+    public void removeModuleFile(String moduleFile) {
+        moduleFiles.remove(moduleFile);
+    }
+
     public int hashCode() {
         return name == null ? 0 : name.hashCode();
     }
@@ -262,6 +275,7 @@ public class PartitionConfig implements Serializable, Cloneable {
         if (!equals(threadManagerConfig, partitionConfig.threadManagerConfig)) return false;
         if (!equals(schedulerConfig, partitionConfig.schedulerConfig)) return false;
         if (!equals(mappingFiles, partitionConfig.mappingFiles)) return false;
+        if (!equals(moduleFiles, partitionConfig.moduleFiles)) return false;
 
         return true;
     }
@@ -302,6 +316,9 @@ public class PartitionConfig implements Serializable, Cloneable {
 
         partitionConfig.mappingFiles = new ArrayList<String>();
         partitionConfig.mappingFiles.addAll(mappingFiles);
+
+        partitionConfig.moduleFiles = new ArrayList<String>();
+        partitionConfig.moduleFiles.addAll(moduleFiles);
 
         return partitionConfig;
     }

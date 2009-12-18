@@ -5,12 +5,14 @@ import org.safehaus.penrose.PenroseConfig;
 import org.safehaus.penrose.Penrose;
 import org.safehaus.penrose.module.ModuleReader;
 import org.safehaus.penrose.module.ModuleWriter;
+import org.safehaus.penrose.module.ModuleConfigManager;
 import org.safehaus.penrose.mapping.MappingReader;
 import org.safehaus.penrose.mapping.MappingWriter;
 import org.safehaus.penrose.mapping.MappingConfigManager;
 import org.safehaus.penrose.connection.ConnectionConfig;
 import org.safehaus.penrose.connection.ConnectionReader;
 import org.safehaus.penrose.connection.ConnectionWriter;
+import org.safehaus.penrose.connection.ConnectionConfigManager;
 import org.safehaus.penrose.directory.*;
 import org.safehaus.penrose.ldap.DN;
 import org.safehaus.penrose.naming.PenroseContext;
@@ -19,6 +21,7 @@ import org.safehaus.penrose.partition.event.PartitionListener;
 import org.safehaus.penrose.source.SourceConfig;
 import org.safehaus.penrose.source.SourceReader;
 import org.safehaus.penrose.source.SourceWriter;
+import org.safehaus.penrose.source.SourceConfigManager;
 import org.safehaus.penrose.util.TextUtil;
 import org.safehaus.penrose.util.PenroseClassLoader;
 import org.slf4j.Logger;
@@ -231,30 +234,53 @@ public class PartitionManager {
         PartitionReader reader = new PartitionReader();
         reader.read(baseDir, partitionConfig);
 
-        File connectionsXml = new File(baseDir, "connections.xml");
+        ConnectionConfigManager connectionConfigManager = partitionConfig.getConnectionConfigManager();
         ConnectionReader connectionReader = new ConnectionReader();
-        connectionReader.read(connectionsXml, partitionConfig.getConnectionConfigManager());
+
+        File connectionsXml = new File(baseDir, "connections.xml");
+        if (connectionsXml.exists()) {
+            connectionReader.read(connectionsXml, connectionConfigManager);
+        }
+
+        SourceConfigManager sourceConfigManager = partitionConfig.getSourceConfigManager();
+        SourceReader sourceReader = new SourceReader();
 
         File sourcesXml = new File(baseDir, "sources.xml");
-        SourceReader sourceReader = new SourceReader();
-        sourceReader.read(sourcesXml, partitionConfig.getSourceConfigManager());
+        if (sourcesXml.exists()) {
+            sourceReader.read(sourcesXml, sourceConfigManager);
+        }
 
         MappingConfigManager mappingConfigManager = partitionConfig.getMappingConfigManager();
         MappingReader mappingReader = new MappingReader();
 
-        mappingReader.read(new File(baseDir, "mappings.xml"), mappingConfigManager);
+        File mappingsXml = new File(baseDir, "mappings.xml");
+        if (mappingsXml.exists()) {
+            mappingReader.read(mappingsXml, mappingConfigManager);
+        }
 
         for (String mappingFile : partitionConfig.getMappingFiles()) {
             mappingReader.read(new File(partitionDir, mappingFile), mappingConfigManager);
         }
 
-        File directoryXml = new File(baseDir, "directory.xml");
+        DirectoryConfig directoryConfig = partitionConfig.getDirectoryConfig();
         DirectoryReader directoryReader = new DirectoryReader();
-        directoryReader.read(directoryXml, partitionConfig.getDirectoryConfig());
+
+        File directoryXml = new File(baseDir, "directory.xml");
+        if (directoryXml.exists()) {
+            directoryReader.read(directoryXml, directoryConfig);
+        }
+
+        ModuleConfigManager moduleConfigManager = partitionConfig.getModuleConfigManager();
+        ModuleReader moduleReader = new ModuleReader();
 
         File modulesXml = new File(baseDir, "modules.xml");
-        ModuleReader moduleReader = new ModuleReader();
-        moduleReader.read(modulesXml, partitionConfig.getModuleConfigManager());
+        if (modulesXml.exists()) {
+            moduleReader.read(modulesXml, moduleConfigManager);
+        }
+
+        for (String moduleFile : partitionConfig.getModuleFiles()) {
+            moduleReader.read(new File(partitionDir, moduleFile), moduleConfigManager);
+        }
 
         addPartitionConfig(partitionConfig);
 

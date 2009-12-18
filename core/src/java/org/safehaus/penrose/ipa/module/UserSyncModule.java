@@ -19,31 +19,36 @@ import java.util.*;
  */
 public class UserSyncModule extends Module {
 
-    LDAPSource source;
-    LDAPSource sourceUsers;
-    LDAPSource target;
-    LDAPSource targetUsers;
+    protected String sourceAlias;
+    protected LDAPSource source;
+    protected LDAPSource sourceUsers;
 
-    String sourceKeyAttribute;
-    String sourceLinkAttribute;
-    String targetKeyAttribute;
-    String targetLinkAttribute;
+    protected String targetAlias;
+    protected LDAPSource targetFE;
+    protected LDAPSource targetBE;
+    protected LDAPSource targetUsersFE;
+    protected LDAPSource targetUsersBE;
 
-    Mapping importSourceUserMapping;
-    Mapping importSourceUserMapping2;
-    Mapping linkSourceUserMapping;
-    Mapping linkSourceUserMapping2;
-    Mapping syncSourceUserMapping;
-    Mapping syncSourceUserMapping2;
-    Mapping unlinkSourceUserMapping;
-    Mapping unlinkSourceUserMapping2;
+    protected String sourceKeyAttribute;
+    protected String sourceLinkAttribute;
+    protected String targetKeyAttribute;
+    protected String targetLinkAttribute;
 
-    Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
-    Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
-    Map<String,DN> targetDns = new LinkedHashMap<String,DN>();
-    Map<String,String> targetDnMapping = new LinkedHashMap<String,String>();
+    protected Mapping importSourceUserMapping;
+    protected Mapping importTargetUserMapping;
+    protected Mapping linkTargetUserMapping;
+    protected Mapping linkSourceUserMapping;
+    protected Mapping syncSourceUserMapping;
+    protected Mapping syncSourceUserMapping2;
+    protected Mapping unlinkTargetUserMapping;
+    protected Mapping unlinkSourceUserMapping;
 
-    Set<String> ignoredDns = new HashSet<String>();
+    protected Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
+    protected Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
+    protected Map<String,DN> targetDns = new LinkedHashMap<String,DN>();
+    protected Map<String,String> targetDnMapping = new LinkedHashMap<String,String>();
+
+    protected Set<String> ignoredDns = new HashSet<String>();
 
     public UserSyncModule() {
     }
@@ -60,6 +65,11 @@ public class UserSyncModule extends Module {
         String sourceName = getParameter("source");
         source = (LDAPSource)sourceManager.getSource(sourceName);
 
+        sourceAlias = getParameter("sourceAlias");
+        if (sourceAlias == null) {
+            sourceAlias = source.getName();
+        }
+
         String sourceUsersName = getParameter("sourceUsers");
         sourceUsers = (LDAPSource)sourceManager.getSource(sourceUsersName);
 
@@ -69,14 +79,14 @@ public class UserSyncModule extends Module {
         String importSourceUserMappingName = getParameter("importSourceUserMapping");
         importSourceUserMapping = mappingManager.getMapping(importSourceUserMappingName);
 
-        String importSourceUserMapping2Name = getParameter("importSourceUserMapping2");
-        importSourceUserMapping2 = mappingManager.getMapping(importSourceUserMapping2Name);
+        String importTargetUserMappingName = getParameter("importTargetUserMapping");
+        importTargetUserMapping = mappingManager.getMapping(importTargetUserMappingName);
+
+        String linkTargetUserMappingName = getParameter("linkTargetUserMapping");
+        linkTargetUserMapping = mappingManager.getMapping(linkTargetUserMappingName);
 
         String linkSourceUserMappingName = getParameter("linkSourceUserMapping");
         linkSourceUserMapping = mappingManager.getMapping(linkSourceUserMappingName);
-
-        String linkSourceUserMapping2Name = getParameter("linkSourceUserMapping2");
-        linkSourceUserMapping2 = mappingManager.getMapping(linkSourceUserMapping2Name);
 
         String syncSourceUserMappingName = getParameter("syncSourceUserMapping");
         syncSourceUserMapping = mappingManager.getMapping(syncSourceUserMappingName);
@@ -84,17 +94,42 @@ public class UserSyncModule extends Module {
         String syncSourceUserMapping2Name = getParameter("syncSourceUserMapping2");
         syncSourceUserMapping2 = mappingManager.getMapping(syncSourceUserMapping2Name);
 
+        String unlinkTargetUserMappingName = getParameter("unlinkTargetUserMapping");
+        unlinkTargetUserMapping = mappingManager.getMapping(unlinkTargetUserMappingName);
+
         String unlinkSourceUserMappingName = getParameter("unlinkSourceUserMapping");
         unlinkSourceUserMapping = mappingManager.getMapping(unlinkSourceUserMappingName);
 
-        String unlinkSourceUserMapping2Name = getParameter("unlinkSourceUserMapping2");
-        unlinkSourceUserMapping2 = mappingManager.getMapping(unlinkSourceUserMapping2Name);
-
         String targetName = getParameter("target");
-        target = (LDAPSource)sourceManager.getSource(targetName);
+        if (targetName == null) {
+            String targetFEName = getParameter("targetFE");
+            targetFE = (LDAPSource)sourceManager.getSource(targetFEName);
+
+            String targetBEName = getParameter("targetBE");
+            targetBE = (LDAPSource)sourceManager.getSource(targetBEName);
+
+        } else {
+            targetFE = (LDAPSource)sourceManager.getSource(targetName);
+            targetBE = targetFE;
+        }
+
+        targetAlias = getParameter("targetAlias");
+        if (targetAlias == null) {
+            targetAlias = targetBE.getName();
+        }
 
         String targetUsersName = getParameter("targetUsers");
-        targetUsers = (LDAPSource)sourceManager.getSource(targetUsersName);
+        if (targetUsersName == null) {
+            String targetUsersFEName = getParameter("targetUsersFE");
+            targetUsersFE = (LDAPSource)sourceManager.getSource(targetUsersFEName);
+
+            String targetUsersBEName = getParameter("targetUsersBE");
+            targetUsersBE = (LDAPSource)sourceManager.getSource(targetUsersBEName);
+
+        } else {
+            targetUsersFE = (LDAPSource)sourceManager.getSource(targetUsersName);
+            targetUsersBE = targetUsersFE;
+        }
 
         targetKeyAttribute = getParameter("targetKeyAttribute");
         targetLinkAttribute = getParameter("targetLinkAttribute");
@@ -129,6 +164,45 @@ public class UserSyncModule extends Module {
     // Public Methods
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    public Collection<SearchResult> getUsers() throws Exception {
+        final Session session = createAdminSession();
+
+        try {
+            SearchRequest sourceRequest = new SearchRequest();
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceUsers.search(session, sourceRequest, sourceResponse);
+
+            Collection<SearchResult> results = new ArrayList<SearchResult>();
+            results.addAll(sourceResponse.getResults());
+
+            return results;
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public SearchResult getUser(String key) throws Exception {
+        final Session session = createAdminSession();
+
+        try {
+            return searchSourceUser(session, key);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
     public void syncUsers() throws Exception {
         final Session session = createAdminSession();
 
@@ -160,6 +234,28 @@ public class UserSyncModule extends Module {
 
             SearchResult sourceEntry = searchSourceUser(session, key);
             syncUser(session, sourceEntry);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void linkUser(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            SearchResult sourceEntry = searchSourceUser(session, key);
+            SearchResult targetEntry = searchTargetUser(session, sourceEntry);
+
+            if (targetEntry == null) return;
+
+            linkUser(session, sourceEntry, targetEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -271,7 +367,7 @@ public class UserSyncModule extends Module {
             if (targetEntry != null) {
                 DN targetDn = targetEntry.getDn();
                 if (log.isInfoEnabled()) log.info("Deleting "+targetDn);
-                target.delete(session, targetDn);
+                targetFE.delete(session, targetDn);
             }
         }
 
@@ -303,7 +399,7 @@ public class UserSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(source.getName(), sourceAttributes);
+        interpreter.set(sourceAlias, sourceAttributes);
 
         importSourceUserMapping.map(interpreter, targetAttributes);
 
@@ -312,7 +408,7 @@ public class UserSyncModule extends Module {
 
         Attribute dnAttribute = targetAttributes.remove("dn");
         if (targetDn == null) {
-            targetDn = new DN((String)dnAttribute.getValue());
+            targetDn = new DN((String)dnAttribute.getValue()).append(targetFE.getBaseDn());
         }
 
         RDN rdn = targetDn.getRdn();
@@ -330,7 +426,7 @@ public class UserSyncModule extends Module {
             AddResponse addResponse = new AddResponse();
 
             try {
-                target.add(session, addRequest, addResponse);
+                targetFE.add(session, addRequest, addResponse);
                 done = true;
 
             } catch (LDAPException e) {
@@ -350,15 +446,15 @@ public class UserSyncModule extends Module {
                     log.debug("New target DN: "+targetDn);
 
                 } else {
-                    done = true;
+                    throw e;
                 }
             }
         }
 
-        SearchResult targetResult = target.find(session, targetDn);
+        SearchResult targetResult = targetUsersFE.find(session, targetDn);
         targetAttributes = targetResult.getAttributes();
 
-        if (importSourceUserMapping2 == null) return targetResult;
+        if (importTargetUserMapping == null) return targetResult;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -366,9 +462,9 @@ public class UserSyncModule extends Module {
         interpreter.clear();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(target.getName(), targetAttributes);
+        interpreter.set(targetAlias, targetAttributes);
 
-        importSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        importTargetUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse modifyResponse = new ModifyResponse();
@@ -400,17 +496,17 @@ public class UserSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(source.getName(), sourceAttributes);
+        interpreter.set(sourceAlias, sourceAttributes);
 
-        linkSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        linkTargetUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
 
-            target.modify(session, targetModifyRequest, targetModifyResponse);
+            targetFE.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (linkSourceUserMapping2 == null) return;
+        if (linkSourceUserMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -418,9 +514,9 @@ public class UserSyncModule extends Module {
         interpreter.clear();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(target.getName(), targetAttributes);
+        interpreter.set(targetAlias, targetAttributes);
 
-        linkSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        linkSourceUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -450,14 +546,14 @@ public class UserSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(source.getName(), sourceAttributes);
+        interpreter.set(sourceAlias, sourceAttributes);
 
         syncSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
 
-            target.modify(session, targetModifyRequest, targetModifyResponse);
+            targetFE.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
         if (syncSourceUserMapping2 == null) return;
@@ -468,7 +564,7 @@ public class UserSyncModule extends Module {
         interpreter.clear();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(target.getName(), targetAttributes);
+        interpreter.set(targetAlias, targetAttributes);
 
         syncSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
 
@@ -527,7 +623,7 @@ public class UserSyncModule extends Module {
 
         ModifyResponse modifyResponse = new ModifyResponse();
 
-        target.modify(session, modifyRequest, modifyResponse);
+        targetFE.modify(session, modifyRequest, modifyResponse);
     }
 
     public void unlinkUser(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
@@ -555,18 +651,18 @@ public class UserSyncModule extends Module {
             Interpreter interpreter = partition.newInterpreter();
             interpreter.set("session", session);
             interpreter.set("module", this);
-            interpreter.set(source.getName(), sourceAttributes);
+            interpreter.set(sourceAlias, sourceAttributes);
 
-            unlinkSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+            unlinkTargetUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
             if (!targetModifyRequest.isEmpty()) {
                 ModifyResponse targetModifyResponse = new ModifyResponse();
 
-                target.modify(session, targetModifyRequest, targetModifyResponse);
+                targetFE.modify(session, targetModifyRequest, targetModifyResponse);
             }
         }
 
-        if (unlinkSourceUserMapping2 == null) return;
+        if (unlinkSourceUserMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -574,9 +670,9 @@ public class UserSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        if (targetEntry != null) interpreter.set(target.getName(), targetAttributes);
+        if (targetEntry != null) interpreter.set(targetAlias, targetAttributes);
 
-        unlinkSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        unlinkSourceUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -626,7 +722,7 @@ public class UserSyncModule extends Module {
 
         SearchResponse targetResponse = new SearchResponse();
 
-        targetUsers.search(session, targetRequest, targetResponse);
+        targetUsersFE.search(session, targetRequest, targetResponse);
 
         if (!targetResponse.hasNext()) return null;
 
@@ -656,7 +752,7 @@ public class UserSyncModule extends Module {
 
                 SearchResponse targetResponse = new SearchResponse();
 
-                target.search(session, targetRequest, targetResponse);
+                targetUsersFE.search(session, targetRequest, targetResponse);
 
                 if (targetResponse.hasNext()) {
                     targetEntry = targetResponse.next();
@@ -680,7 +776,7 @@ public class UserSyncModule extends Module {
 
                 SearchResponse targetResponse = new SearchResponse();
 
-                targetUsers.search(session, targetRequest, targetResponse);
+                targetUsersFE.search(session, targetRequest, targetResponse);
 
                 if (targetResponse.hasNext()) {
                     targetEntry = targetResponse.next();

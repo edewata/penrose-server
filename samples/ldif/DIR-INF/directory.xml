@@ -23,7 +23,7 @@
       <permission>rs</permission>
     </aci>
     <parameter>
-      <param-name>attributes</param-name>
+      <param-name>mapAttributes</param-name>
       <param-value>uniqueMember</param-value>
     </parameter>
   </entry>

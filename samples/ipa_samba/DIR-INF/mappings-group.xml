@@ -9,7 +9,7 @@
 
     <rule name="dn">
       <expression>
-return "CN="+ipa.cn+",CN=Users,DC=domain1,DC=com";
+return "CN="+ipa.cn+",CN=Users,DC=example,DC=com";
       </expression>
     </rule>
 

@@ -9,7 +9,7 @@
 
     <rule name="dn">
       <expression>
-return "cn="+samba.sAMAccountName+",cn=groups,cn=accounts,dc=domain1,dc=com";
+return "cn="+samba.sAMAccountName+",cn=groups,cn=accounts,dc=example,dc=com";
       </expression>
     </rule>
 
@@ -39,8 +39,8 @@ return module.transformSourceMembers(session, samba.member);
     <rule name="objectGUID">
       <variable>samba.objectGUID</variable>
     </rule>
-    <rule name="objectSid">
-      <variable>samba.objectSid</variable>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
     </rule>
 
   </mapping>
@@ -64,8 +64,8 @@ return module.transformSourceMembers(session, samba.member);
     <rule name="objectGUID">
       <variable>samba.objectGUID</variable>
     </rule>
-    <rule name="objectSid">
-      <variable>samba.objectSid</variable>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
     </rule>
 
   </mapping>
@@ -77,7 +77,7 @@ return module.transformSourceMembers(session, samba.member);
     </rule>
 
     <rule name="objectGUID" action="delete"/>
-    <rule name="objectSid" action="delete"/>
+    <rule name="sambaSID" action="delete"/>
 
   </mapping>
 

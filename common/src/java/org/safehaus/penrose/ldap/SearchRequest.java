@@ -91,6 +91,17 @@ public class SearchRequest extends Request implements Cloneable {
         attributes.remove(attribute);
     }
     
+    public void addAttributes(Collection<String> attributes) {
+        if (this.attributes == attributes) return;
+        if (attributes == null) return;
+        this.attributes.addAll(attributes);
+    }
+
+    public void addAttributes(String[] attributes) {
+        if (attributes == null) return;
+        this.attributes.addAll(Arrays.asList(attributes));
+    }
+
     public void setAttributes(Collection<String> attributes) {
         if (this.attributes == attributes) return;
         this.attributes.clear();

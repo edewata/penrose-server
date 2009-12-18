@@ -36,6 +36,7 @@ public class LDAP {
 
     public final static String BASE_DN           = "baseDn";
     public final static String NEW_BASE_DN       = "newBaseDn";
+    public final static String HIDE_BASE_DN      = "hideBaseDn";
     public final static String SCOPE             = "scope";
     public final static String FILTER            = "filter";
     public final static String OBJECT_CLASSES    = "objectClasses";
@@ -43,7 +44,8 @@ public class LDAP {
     public final static String SIZE_LIMIT        = "sizeLimit";
     public final static String TIME_LIMIT        = "timeLimit";
     public final static String ATTRIBUTES        = "attributes";
-    
+    public final static String MAP_ATTRIBUTES    = "mapAttributes";
+
     public final static String AUTHENTICATION          = "authentication";
     public final static String AUTHENTICATION_DEFAULT  = "default";
     public final static String AUTHENTICATION_FULL     = "full";

@@ -80,7 +80,7 @@ public class ActiveDirectory {
 */
     }
 
-    public static String getGUID(byte[] guid) {
+    public static String toStringGUID(byte[] guid) {
         StringBuilder sb = new StringBuilder();
 
         sb.append(byte2hex(guid[3]));
@@ -113,7 +113,7 @@ public class ActiveDirectory {
      * @param sid byte array of SID
      * @return string representation of SID
      */
-    public static String getSID(byte[] sid) {
+    public static String toStringSID(byte[] sid) {
 
         boolean debug = log.isDebugEnabled();
 
@@ -180,7 +180,7 @@ public class ActiveDirectory {
 
         in.close();
 
-        String guid = getGUID(buffer);
+        String guid = toStringGUID(buffer);
         System.out.println(guid);
     }
 
@@ -196,7 +196,7 @@ public class ActiveDirectory {
 
         in.close();
 
-        String sid = getSID(buffer);
+        String sid = toStringSID(buffer);
         System.out.println(sid);
     }
 

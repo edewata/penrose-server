@@ -26,6 +26,7 @@ public class LDAPSource extends Source {
 
     DN sourceBaseDn;
     DN newSourceBaseDn;
+    boolean hideBaseDn;
 
     int sourceScope;
     Filter sourceFilter;
@@ -35,6 +36,7 @@ public class LDAPSource extends Source {
     long sourceTimeLimit;
 
     Collection<String> attributeNames = new HashSet<String>();
+    Collection<String> mapAttributeNames = new HashSet<String>();
 
     public LDAPSource() {
     }
@@ -52,6 +54,10 @@ public class LDAPSource extends Source {
         value = getParameter(LDAP.NEW_BASE_DN);
         newSourceBaseDn = value == null ? null : new DN(value);
         if (debug) log.debug("New Base DN: "+newSourceBaseDn);
+
+        value = getParameter(LDAP.HIDE_BASE_DN);
+        hideBaseDn = value == null ? false : Boolean.parseBoolean(value);
+        if (debug) log.debug("Hide Base DN: "+hideBaseDn);
 
         sourceScope = getScope(getParameter(LDAP.SCOPE));
         if (debug) log.debug("Scope: "+sourceScope);
@@ -76,14 +82,23 @@ public class LDAPSource extends Source {
 
         s = getParameter(LDAP.ATTRIBUTES);
         if (s != null) {
-            StringTokenizer st = new StringTokenizer(s, ", ");
+            StringTokenizer st = new StringTokenizer(s, ", \n");
             while (st.hasMoreTokens()) {
                 String attributeName = st.nextToken();
-                attributeNames.add(attributeName.toLowerCase());
+                attributeNames.add(attributeName);
             }
             if (debug) log.debug("Attributes: "+attributeNames);
         }
 
+        s = getParameter(LDAP.MAP_ATTRIBUTES);
+        if (s != null) {
+            StringTokenizer st = new StringTokenizer(s, ", \n");
+            while (st.hasMoreTokens()) {
+                String attributeName = st.nextToken();
+                mapAttributeNames.add(attributeName.toLowerCase());
+            }
+            if (debug) log.debug("Map attributes: "+mapAttributeNames);
+        }
     }
 
     public int getScope(String scope) {
@@ -119,7 +134,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -143,9 +158,9 @@ public class LDAPSource extends Source {
             newAttributes.set(ocAttribute);
         }
 
-        if (newSourceBaseDn != null && !attributeNames.isEmpty()) {
+        if (newSourceBaseDn != null && !mapAttributeNames.isEmpty()) {
             for (Attribute attribute : newAttributes.getAll()) {
-                if (!attributeNames.contains(attribute.getName().toLowerCase())) continue;
+                if (!mapAttributeNames.contains(attribute.getName().toLowerCase())) continue;
 
                 Collection<Object> values = new ArrayList<Object>();
                 for (Object value : attribute.getValues()) {
@@ -202,7 +217,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -264,7 +279,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -278,7 +293,7 @@ public class LDAPSource extends Source {
         newRequest.setDn(dn);
 
         if (newSourceBaseDn != null) {
-            if (attributeNames.contains(newRequest.getAttributeName().toLowerCase())) {
+            if (mapAttributeNames.contains(newRequest.getAttributeName().toLowerCase())) {
                 Object value = newRequest.getAttributeValue();
                 DN newDn;
                 if (value instanceof byte[]) {
@@ -326,7 +341,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -374,7 +389,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -387,10 +402,10 @@ public class LDAPSource extends Source {
         ModifyRequest newRequest = (ModifyRequest)request.clone();
         newRequest.setDn(dn);
 
-        if (newSourceBaseDn != null && !attributeNames.isEmpty()) {
+        if (newSourceBaseDn != null && !mapAttributeNames.isEmpty()) {
             for (Modification modification : newRequest.getModifications()) {
                 Attribute attribute = modification.getAttribute();
-                if (!attributeNames.contains(attribute.getName().toLowerCase())) continue;
+                if (!mapAttributeNames.contains(attribute.getName().toLowerCase())) continue;
 
                 Collection<Object> values = new ArrayList<Object>();
                 for (Object value : attribute.getValues()) {
@@ -438,7 +453,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -551,7 +566,8 @@ public class LDAPSource extends Source {
                         newRequest.setFilter(filter);
                         newRequest.setSizeLimit(sizeLimit);
                         newRequest.setTimeLimit(timeLimit);
-                        newRequest.setAttributes(attributes);
+                        newRequest.setAttributes(attributeNames);
+                        newRequest.addAttributes(attributes);
                         newRequest.setControls(controls);
 
                         SearchResponse newResponse = new Pipeline(response) {
@@ -596,7 +612,8 @@ public class LDAPSource extends Source {
                 newRequest.setFilter(filter);
                 newRequest.setSizeLimit(sizeLimit);
                 newRequest.setTimeLimit(timeLimit);
-                newRequest.setAttributes(attributes);
+                newRequest.setAttributes(attributeNames);
+                newRequest.addAttributes(attributes);
                 newRequest.setControls(controls);
 
                 SearchResponse newResponse = new Pipeline(response) {
@@ -650,7 +667,7 @@ public class LDAPSource extends Source {
 
             final Filter filter = createFilter(request);
 
-            if (newSourceBaseDn != null && !attributeNames.isEmpty()) {
+            if (newSourceBaseDn != null && !mapAttributeNames.isEmpty()) {
                 FilterProcessor fp = new FilterProcessor() {
                     public Filter process(Stack<Filter> path, Filter filter) throws Exception {
                         if (!(filter instanceof SimpleFilter)) {
@@ -660,7 +677,7 @@ public class LDAPSource extends Source {
                         SimpleFilter sf = (SimpleFilter)filter;
 
                         String attribute = sf.getAttribute();
-                        if (!attributeNames.contains(attribute.toLowerCase())) return filter;
+                        if (!mapAttributeNames.contains(attribute.toLowerCase())) return filter;
 
                         DN dn = new DN(sf.getValue().toString());
                         dn = dn.getPrefix(newSourceBaseDn).append(sourceBaseDn);
@@ -718,7 +735,8 @@ public class LDAPSource extends Source {
                     newRequest.setFilter(filter);
                     newRequest.setSizeLimit(sizeLimit);
                     newRequest.setTimeLimit(timeLimit);
-                    newRequest.setAttributes(attributes);
+                    newRequest.setAttributes(attributeNames);
+                    newRequest.addAttributes(attributes);
                     newRequest.setControls(controls);
 
                     SearchResponse newResponse = new Pipeline(response) {
@@ -766,7 +784,8 @@ public class LDAPSource extends Source {
                 newRequest.setFilter(filter);
                 newRequest.setSizeLimit(sizeLimit);
                 newRequest.setTimeLimit(timeLimit);
-                newRequest.setAttributes(attributes);
+                newRequest.setAttributes(attributeNames);
+                newRequest.addAttributes(attributes);
                 newRequest.setControls(controls);
 
                 SearchResponse newResponse = new Pipeline(response) {
@@ -843,7 +862,8 @@ public class LDAPSource extends Source {
                     newRequest.setFilter(filter);
                     newRequest.setSizeLimit(sizeLimit);
                     newRequest.setTimeLimit(timeLimit);
-                    newRequest.setAttributes(attributes);
+                    newRequest.setAttributes(attributeNames);
+                    newRequest.addAttributes(attributes);
                     newRequest.setControls(controls);
 
                     SearchResponse newResponse = new Pipeline(response) {
@@ -877,7 +897,7 @@ public class LDAPSource extends Source {
                 DNBuilder db = new DNBuilder();
                 db.append(baseDn);
 
-                if (sourceScope == SearchRequest.SCOPE_ONE) {
+                if (hideBaseDn) {
                     db.append(sourceBaseDn);
                 }
 
@@ -892,7 +912,8 @@ public class LDAPSource extends Source {
                 newRequest.setFilter(filter);
                 newRequest.setSizeLimit(sizeLimit);
                 newRequest.setTimeLimit(timeLimit);
-                newRequest.setAttributes(attributes);
+                newRequest.setAttributes(attributeNames);
+                newRequest.addAttributes(attributes);
                 newRequest.setControls(controls);
 
                 SearchResponse newResponse = new Pipeline(response) {
@@ -931,7 +952,8 @@ public class LDAPSource extends Source {
                 newRequest.setFilter(filter);
                 newRequest.setSizeLimit(sizeLimit);
                 newRequest.setTimeLimit(timeLimit);
-                newRequest.setAttributes(attributes);
+                newRequest.setAttributes(attributeNames);
+                newRequest.addAttributes(attributes);
                 newRequest.setControls(controls);
 
                 SearchResponse newResponse = new Pipeline(response) {
@@ -987,7 +1009,7 @@ public class LDAPSource extends Source {
         DNBuilder db = new DNBuilder();
         db.append(request.getDn());
 
-        if (sourceScope == SearchRequest.SCOPE_ONE) {
+        if (hideBaseDn) {
             db.append(sourceBaseDn);
         }
 
@@ -1091,7 +1113,7 @@ public class LDAPSource extends Source {
             }
         }
 
-        for (String attributeName : attributeNames) {
+        for (String attributeName : mapAttributeNames) {
             Attribute attribute = newAttributes.get(attributeName);
             if (attribute == null) continue;
 

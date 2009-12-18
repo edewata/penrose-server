@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE partition PUBLIC
+  "-//Penrose/DTD Partition ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/partition.dtd">
+
+<partition>
+
+  <mapping-file>DIR-INF/mappings-user.xml</mapping-file>
+  <mapping-file>DIR-INF/mappings-group.xml</mapping-file>
+
+</partition>

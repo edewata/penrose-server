@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sources PUBLIC
+  "-//Penrose/DTD Sources ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/sources.dtd">
+
+<sources>
+
+  <source name="samba_changelog">
+    <connection-name>SambaBE</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>cn=changelog</param-value>
+    </parameter>
+  </source>
+
+  <source name="samba_tracker">
+    <connection-name>Database</connection-name>
+    <field name="changeNumber" type="INTEGER" primaryKey="true"/>
+    <field name="changeTimestamp" type="DATETIME"/>
+    <parameter>
+      <param-name>table</param-name>
+      <param-value>samba_tracker</param-value>
+    </parameter>
+    <parameter>
+      <param-name>create</param-name>
+      <param-value>true</param-value>
+    </parameter>
+  </source>
+
+  <source name="samba">
+    <connection-name>SambaBE</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
+    </parameter>
+  </source>
+
+  <source name="samba_users">
+    <connection-name>SambaBE</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>filter</param-name>
+      <param-value>(&amp;(objectClass=user)(!(objectClass=computer))(!(servicePrincipalName=*)))</param-value>
+    </parameter>
+    <parameter>
+      <param-name>attributes</param-name>
+      <param-value>objectClass cn sn sAMAccountName
+          homeDirectory accountExpires pwdLastSet
+          sambaSID lastLogon scriptPath
+          profilePath logonCount badPwdCount primaryGroupID
+          userAccountControl nsUniqueId supplementalCredentials
+      </param-value>
+    </parameter>
+  </source>
+
+  <source name="samba_groups">
+    <connection-name>SambaBE</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>filter</param-name>
+      <param-value>(objectClass=group)</param-value>
+    </parameter>
+  </source>
+
+  <source name="samba_hosts">
+    <connection-name>SambaBE</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>filter</param-name>
+      <param-value>(objectClass=computer)</param-value>
+    </parameter>
+  </source>
+
+  <source name="ipa">
+    <connection-name>IPA</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>dc=example,dc=com</param-value>
+    </parameter>
+  </source>
+
+  <source name="ipaUsers">
+    <connection-name>IPA</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>cn=users,cn=accounts,dc=example,dc=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>scope</param-name>
+      <param-value>ONELEVEL</param-value>
+    </parameter>
+  </source>
+
+  <source name="ipa_groups">
+    <connection-name>IPA</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>cn=groups,cn=accounts,dc=example,dc=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>scope</param-name>
+      <param-value>ONELEVEL</param-value>
+    </parameter>
+  </source>
+
+  <source name="ipa_hosts">
+    <connection-name>IPA</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>cn=hosts,cn=accounts,dc=example,dc=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>scope</param-name>
+      <param-value>ONELEVEL</param-value>
+    </parameter>
+  </source>
+
+</sources>

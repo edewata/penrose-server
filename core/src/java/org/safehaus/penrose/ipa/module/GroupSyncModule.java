@@ -120,6 +120,45 @@ public class GroupSyncModule extends Module {
     // Public Methods
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    public Collection<SearchResult> getGroups() throws Exception {
+        final Session session = createAdminSession();
+
+        try {
+            SearchRequest sourceRequest = new SearchRequest();
+
+            SearchResponse sourceResponse = new SearchResponse();
+
+            sourceGroups.search(session, sourceRequest, sourceResponse);
+
+            Collection<SearchResult> results = new ArrayList<SearchResult>();
+            results.addAll(sourceResponse.getResults());
+
+            return results;
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public SearchResult getGroup(String key) throws Exception {
+        final Session session = createAdminSession();
+
+        try {
+            return searchSourceGroup(session, key);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
     public void syncGroups() throws Exception {
         final Session session = createAdminSession();
 

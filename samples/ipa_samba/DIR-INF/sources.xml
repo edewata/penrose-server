@@ -71,31 +71,63 @@
     </parameter>
   </source>
 
-  <source name="samba">
-    <connection-name>Samba</connection-name>
+  <source name="sambaFE">
+    <connection-name>SambaFE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>DC=example,DC=com</param-value>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
     </parameter>
   </source>
 
-  <source name="samba_users">
-    <connection-name>Samba</connection-name>
+  <source name="sambaUsersFE">
+    <connection-name>SambaFE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>DC=example,DC=com</param-value>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
     </parameter>
     <parameter>
       <param-name>filter</param-name>
       <param-value>(&amp;(objectClass=user)(!(objectClass=computer))(!(servicePrincipalName=*)))</param-value>
     </parameter>
+    <parameter>
+      <param-name>attributes</param-name>
+      <param-value>
+          objectClass cn sn sAMAccountName
+          homeDirectory accountExpires pwdLastSet
+          objectSid lastLogon scriptPath
+          profilePath logonCount badPwdCount primaryGroupID
+          userAccountControl objectGUID supplementalCredentials
+      </param-value>
+    </parameter>
+  </source>
+
+  <source name="sambaUsersBE">
+    <connection-name>SambaBE</connection-name>
+    <parameter>
+      <param-name>baseDn</param-name>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>filter</param-name>
+      <param-value>(&amp;(objectClass=user)(!(objectClass=computer))(!(servicePrincipalName=*)))</param-value>
+    </parameter>
+    <parameter>
+      <param-name>attributes</param-name>
+      <param-value>
+          objectClass cn sn sAMAccountName
+          sambaHomePath accountExpires sambaPwdLastSet
+          sambaSID lastLogon scriptPath
+          sambaProfilePath logonCount badPwdCount primaryGroupID
+          userAccountControl nsUniqueId supplementalCredentials
+      </param-value>
+    </parameter>
   </source>
 
   <source name="samba_groups">
-    <connection-name>Samba</connection-name>
+    <connection-name>SambaBE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>DC=example,DC=com</param-value>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
     </parameter>
     <parameter>
       <param-name>filter</param-name>
@@ -104,10 +136,10 @@
   </source>
 
   <source name="samba_hosts">
-    <connection-name>Samba</connection-name>
+    <connection-name>SambaBE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
-      <param-value>CN=Computers,DC=example,DC=com</param-value>
+      <param-value>DC=samba,DC=example,DC=com</param-value>
     </parameter>
     <parameter>
       <param-name>filter</param-name>

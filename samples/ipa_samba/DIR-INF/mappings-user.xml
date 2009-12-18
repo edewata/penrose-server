@@ -9,7 +9,7 @@
 
     <rule name="dn">
       <expression>
-return "CN="+ipa.cn+",CN=Users,DC=domain1,DC=com";
+return "CN="+ipa.cn+",CN=Users";
       </expression>
     </rule>
 
@@ -56,23 +56,34 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
     </rule>
 
     <rule name="userAccountControl">
-      <constant>512</constant>
+      <constant>640</constant>
     </rule>
 
   </mapping>
 
-  <mapping name="ImportIPAUser2">
+  <mapping name="ImportSambaUser">
+
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
     </rule>
 
-    <rule name="objectGUID">
-      <variable>samba.objectGUID</variable>
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
     </rule>
-    <rule name="objectSid">
-      <variable>samba.objectSid</variable>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
     </rule>
+
     <rule name="lastLogon">
       <variable>samba.lastLogon</variable>
     </rule>
@@ -92,12 +103,12 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
       <variable>samba.primaryGroupID</variable>
     </rule>
     <rule name="userAccountControl">
-      <constant>512</constant>
+      <constant>samba.userAccountControl</constant>
     </rule>
 
   </mapping>
 
-  <mapping name="LinkIPAUser">
+  <mapping name="LinkSambaUser">
 
     <rule name="sn">
       <variable>ipa.sn</variable>
@@ -127,17 +138,23 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
 
   </mapping>
 
-  <mapping name="LinkIPAUser2">
+  <mapping name="LinkIPAUser">
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
     </rule>
 
-    <rule name="objectGUID">
-      <variable>samba.objectGUID</variable>
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
     </rule>
-    <rule name="objectSid">
-      <variable>samba.objectSid</variable>
+    <rule name="sambaSID">
+      <expression>
+import org.safehaus.penrose.ad.*;
+return ActiveDirectory.toStringSID(samba.objectSid);
+      </expression>
     </rule>
 
     <rule name="lastLogon">
@@ -216,18 +233,18 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
 
   </mapping>
 
-  <mapping name="UnlinkIPAUser">
+  <mapping name="UnlinkSambaUser">
 
   </mapping>
 
-  <mapping name="UnlinkIPAUser2">
+  <mapping name="UnlinkIPAUser">
 
     <rule name="objectClass" action="delete">
       <constant>extensibleObject</constant>
     </rule>
 
-    <rule name="objectGUID" action="delete"/>
-    <rule name="objectSid" action="delete"/>
+    <rule name="ntUniqueId" action="delete"/>
+    <rule name="sambaSID" action="delete"/>
 
     <rule name="lastLogon" action="delete"/>
     <rule name="scriptPath" action="delete"/>

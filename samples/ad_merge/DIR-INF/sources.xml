@@ -28,7 +28,7 @@
       <param-value>source1,source2</param-value>
     </parameter>
     <parameter>
-      <param-name>attributes</param-name>
+      <param-name>mapAttributes</param-name>
       <param-value>member</param-value>
     </parameter>
   </source>

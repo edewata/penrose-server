@@ -102,6 +102,10 @@ public class PartitionWriter {
             element.add(createMappingFileElement(mappingFile));
         }
 
+        for (String moduleFile : partitionConfig.getModuleFiles()) {
+            element.add(createModuleFileElement(moduleFile));
+        }
+
         return element;
     }
 
@@ -178,6 +182,14 @@ public class PartitionWriter {
 
         Element element = new DefaultElement("mapping-file");
         element.add(new DefaultText(mappingFile));
+
+        return element;
+    }
+
+    public Element createModuleFileElement(String moduleFile) {
+
+        Element element = new DefaultElement("module-file");
+        element.add(new DefaultText(moduleFile));
 
         return element;
     }

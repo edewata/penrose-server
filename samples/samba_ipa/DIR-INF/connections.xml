@@ -9,7 +9,7 @@
     <adapter-name>LDAP</adapter-name>
     <parameter>
       <param-name>java.naming.provider.url</param-name>
-      <param-value>ldap://ipa.example.com/</param-value>
+      <param-value>ldap://f12.example.com/</param-value>
     </parameter>
     <parameter>
       <param-name>java.naming.security.principal</param-name>
@@ -21,11 +21,11 @@
     </parameter>
     <parameter>
       <param-name>java.naming.ldap.attributes.binary</param-name>
-      <param-value>objectGUID objectSid</param-value>
+      <param-value>krbPrincipalKey userPassword</param-value>
     </parameter>
   </connection>
 
-  <connection name="Samba">
+  <connection name="SambaFE">
     <adapter-name>LDAP</adapter-name>
     <parameter>
       <param-name>java.naming.provider.url</param-name>
@@ -33,7 +33,7 @@
     </parameter>
     <parameter>
       <param-name>java.naming.security.principal</param-name>
-      <param-value>CN=Sync,CN=Users,DC=example,DC=com</param-value>
+      <param-value>CN=Sync,CN=Users,DC=samba,DC=example,DC=com</param-value>
     </parameter>
     <parameter>
       <param-name>java.naming.security.credentials</param-name>
@@ -41,7 +41,33 @@
     </parameter>
     <parameter>
       <param-name>java.naming.ldap.attributes.binary</param-name>
-      <param-value>objectGUID objectSid</param-value>
+      <param-value>
+          objectGUID objectSid ntPwdHistory lmPwdHistory nTSecurityDescriptor
+          supplementalCredentials unicodePwd
+      </param-value>
+    </parameter>
+  </connection>
+
+  <connection name="SambaBE">
+    <adapter-name>LDAP</adapter-name>
+    <parameter>
+      <param-name>java.naming.provider.url</param-name>
+      <param-value>ldap://samba.example.com:1389/</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.security.principal</param-name>
+      <param-value>CN=Manager,DC=samba,DC=example,DC=com</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.security.credentials</param-name>
+      <param-value>Secret123</param-value>
+    </parameter>
+    <parameter>
+      <param-name>java.naming.ldap.attributes.binary</param-name>
+      <param-value>
+          ntPwdHistory lmPwdHistory nTSecurityDescriptor
+          supplementalCredentials unicodePwd
+      </param-value>
     </parameter>
   </connection>
 
@@ -53,7 +79,7 @@
     </parameter>
     <parameter>
       <param-name>url</param-name>
-      <param-value>jdbc:hsqldb:file:partitions/ipa/db/example</param-value>
+      <param-value>jdbc:hsqldb:file:partitions/samba_ipa/db/example</param-value>
     </parameter>
     <parameter>
       <param-name>user</param-name>

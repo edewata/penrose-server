@@ -100,4 +100,4 @@ exec "$JAVACMD" $VD_SERVER_OPTS \
 -Djava.library.path="$LOCALLIBPATH" \
 -Dpenrose.home="$VD_SERVER_HOME" \
 -Dpartition.name="$partition_name" \
-org.safehaus.penrose.ipa.IPAClient "$@"
+org.safehaus.penrose.ipa.IPASyncClient "$@"

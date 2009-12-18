@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.io.Serializable;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 /**
  * @author Endi S. Dewata
@@ -201,5 +203,23 @@ public class SearchResult implements Serializable, Cloneable {
         }
 
         return sr;
+    }
+
+    public String toString() {
+
+        StringWriter sw = new StringWriter();
+        PrintWriter out = new PrintWriter(sw);
+
+        out.println("dn: "+dn);
+
+        for (Attribute attribute : attributes.getAll()) {
+            String name = attribute.getName();
+
+            for (Object value : attribute.getValues()) {
+                out.println(name+": "+value);
+            }
+        }
+
+        return sw.toString();
     }
 }

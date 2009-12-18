@@ -112,7 +112,7 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
         for (int i=0; i<2; i++) {
             try {
                 if (bindDn != null && bindPassword != null) {
-                    log.debug("Initializing authenticated connection.");
+                    log.debug("Initializing authenticated connection as ["+bindDn+"] with ["+new String(bindPassword)+"].");
                     connection.bind(3, bindDn, bindPassword);
 
                 } else {
@@ -132,6 +132,8 @@ public class LDAPClient implements Cloneable, LDAPAuthHandler {
                 }
             }
         }
+
+        log.debug("Connection initialized.");
 
         LDAPConstraints constraints = new LDAPConstraints();
         constraints.setReferralHandler(this);
