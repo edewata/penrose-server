@@ -24,32 +24,32 @@
       <param-value>ntUniqueId</param-value>
     </parameter>
     <parameter>
-      <param-name>importSourceUserMapping</param-name>
-      <param-value>ImportIPAUser</param-value>
+      <param-name>targetImportUserMapping</param-name>
+      <param-value>SambaImportUser</param-value>
     </parameter>
     <parameter>
-      <param-name>importTargetUserMapping</param-name>
-      <param-value>ImportSambaUser</param-value>
+      <param-name>sourceImportUserMapping</param-name>
+      <param-value>IPAImportUser</param-value>
     </parameter>
     <parameter>
-      <param-name>linkTargetUserMapping</param-name>
-      <param-value>LinkSambaUser</param-value>
+      <param-name>targetLinkUserMapping</param-name>
+      <param-value>SambaLinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>linkSourceUserMapping</param-name>
-      <param-value>LinkIPAUser</param-value>
+      <param-name>sourceLinkUserMapping</param-name>
+      <param-value>IPALinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>syncSourceUserMapping</param-name>
-      <param-value>SyncIPAUser</param-value>
+      <param-name>targetSyncUserMapping</param-name>
+      <param-value>SambaSyncUser</param-value>
     </parameter>
     <parameter>
-      <param-name>unlinkTargetUserMapping</param-name>
-      <param-value>UnlinkSambaUser</param-value>
+      <param-name>targetUnlinkUserMapping</param-name>
+      <param-value>SambaUnlinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>unlinkSourceUserMapping</param-name>
-      <param-value>UnlinkIPAUser</param-value>
+      <param-name>sourceUnlinkUserMapping</param-name>
+      <param-value>IPAUnlinkUser</param-value>
     </parameter>
     <parameter>
       <param-name>targetAlias</param-name>
@@ -97,43 +97,51 @@
     </parameter>
     <parameter>
       <param-name>sourceLinkAttribute</param-name>
-      <param-value>objectGUID</param-value>
+      <param-value>ntUniqueId</param-value>
     </parameter>
     <parameter>
       <param-name>importSourceGroupMapping</param-name>
       <param-value>ImportIPAGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>importSourceGroupMapping2</param-name>
-      <param-value>ImportIPAGroup2</param-value>
+      <param-name>importTargetGroupMapping</param-name>
+      <param-value>ImportSambaGroup</param-value>
+    </parameter>
+    <parameter>
+      <param-name>linkSourceGroupMapping</param-name>
+      <param-value>LinkIPAGroup</param-value>
+    </parameter>
+    <parameter>
+      <param-name>linkTargetGroupMapping</param-name>
+      <param-value>LinkSambaGroup</param-value>
     </parameter>
     <parameter>
       <param-name>syncSourceGroupMapping</param-name>
       <param-value>SyncIPAGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>syncSourceGroupMapping2</param-name>
-      <param-value>SyncIPAGroup2</param-value>
+      <param-name>syncTargetGroupMapping</param-name>
+      <param-value>SyncSambaGroup</param-value>
     </parameter>
     <parameter>
       <param-name>unlinkSourceGroupMapping</param-name>
       <param-value>UnlinkIPAGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>unlinkSourceGroupMapping2</param-name>
-      <param-value>UnlinkIPAGroup2</param-value>
+      <param-name>unlinkTargetGroupMapping</param-name>
+      <param-value>UnlinkSambaGroup</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetAlias</param-name>
+      <param-value>samba</param-value>
     </parameter>
     <parameter>
       <param-name>target</param-name>
-      <param-value>sambaBE</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetWrite</param-name>
       <param-value>sambaFE</param-value>
     </parameter>
     <parameter>
       <param-name>targetGroups</param-name>
-      <param-value>samba_groups</param-value>
+      <param-value>sambaGroupsBE</param-value>
     </parameter>
     <parameter>
       <param-name>targetKeyAttribute</param-name>
@@ -141,7 +149,7 @@
     </parameter>
     <parameter>
       <param-name>targetLinkAttribute</param-name>
-      <param-value>objectGUID</param-value>
+      <param-value>nsUniqueId</param-value>
     </parameter>
     <parameter>
       <param-name>userSyncModule</param-name>
@@ -177,15 +185,15 @@
     </parameter>
     <parameter>
       <param-name>targetUsers</param-name>
-      <param-value>samba_users</param-value>
+      <param-value>sambaUsersBE</param-value>
     </parameter>
     <parameter>
       <param-name>targetGroups</param-name>
-      <param-value>samba_groups</param-value>
+      <param-value>sambaGroupsBE</param-value>
     </parameter>
     <parameter>
       <param-name>targetHosts</param-name>
-      <param-value>samba_hosts</param-value>
+      <param-value>sambaHosts</param-value>
     </parameter>
     <parameter>
       <param-name>changelog</param-name>

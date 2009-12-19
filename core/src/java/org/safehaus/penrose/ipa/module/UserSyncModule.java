@@ -34,14 +34,14 @@ public class UserSyncModule extends Module {
     protected String targetKeyAttribute;
     protected String targetLinkAttribute;
 
-    protected Mapping importSourceUserMapping;
-    protected Mapping importTargetUserMapping;
-    protected Mapping linkTargetUserMapping;
-    protected Mapping linkSourceUserMapping;
-    protected Mapping syncSourceUserMapping;
-    protected Mapping syncSourceUserMapping2;
-    protected Mapping unlinkTargetUserMapping;
-    protected Mapping unlinkSourceUserMapping;
+    protected Mapping targetImportUserMapping;
+    protected Mapping sourceImportUserMapping;
+    protected Mapping targetLinkUserMapping;
+    protected Mapping sourceLinkUserMapping;
+    protected Mapping targetSyncUserMapping;
+    protected Mapping sourceSyncUserMapping;
+    protected Mapping targetUnlinkUserMapping;
+    protected Mapping sourceUnlinkUserMapping;
 
     protected Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
     protected Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
@@ -76,29 +76,29 @@ public class UserSyncModule extends Module {
         sourceKeyAttribute = getParameter("sourceKeyAttribute");
         sourceLinkAttribute = getParameter("sourceLinkAttribute");
 
-        String importSourceUserMappingName = getParameter("importSourceUserMapping");
-        importSourceUserMapping = mappingManager.getMapping(importSourceUserMappingName);
+        String targetImportUserMappingName = getParameter("targetImportUserMapping");
+        targetImportUserMapping = mappingManager.getMapping(targetImportUserMappingName);
 
-        String importTargetUserMappingName = getParameter("importTargetUserMapping");
-        importTargetUserMapping = mappingManager.getMapping(importTargetUserMappingName);
+        String sourceImportUserMappingName = getParameter("sourceImportUserMapping");
+        sourceImportUserMapping = mappingManager.getMapping(sourceImportUserMappingName);
 
-        String linkTargetUserMappingName = getParameter("linkTargetUserMapping");
-        linkTargetUserMapping = mappingManager.getMapping(linkTargetUserMappingName);
+        String targetLinkUserMappingName = getParameter("targetLinkUserMapping");
+        targetLinkUserMapping = mappingManager.getMapping(targetLinkUserMappingName);
 
-        String linkSourceUserMappingName = getParameter("linkSourceUserMapping");
-        linkSourceUserMapping = mappingManager.getMapping(linkSourceUserMappingName);
+        String sourceLinkUserMappingName = getParameter("sourceLinkUserMapping");
+        sourceLinkUserMapping = mappingManager.getMapping(sourceLinkUserMappingName);
 
-        String syncSourceUserMappingName = getParameter("syncSourceUserMapping");
-        syncSourceUserMapping = mappingManager.getMapping(syncSourceUserMappingName);
+        String targetSyncUserMappingName = getParameter("targetSyncUserMapping");
+        targetSyncUserMapping = mappingManager.getMapping(targetSyncUserMappingName);
 
-        String syncSourceUserMapping2Name = getParameter("syncSourceUserMapping2");
-        syncSourceUserMapping2 = mappingManager.getMapping(syncSourceUserMapping2Name);
+        String sourceSyncUserMappingName = getParameter("sourceSyncUserMapping");
+        sourceSyncUserMapping = mappingManager.getMapping(sourceSyncUserMappingName);
 
-        String unlinkTargetUserMappingName = getParameter("unlinkTargetUserMapping");
-        unlinkTargetUserMapping = mappingManager.getMapping(unlinkTargetUserMappingName);
+        String targetUnlinkUserMappingName = getParameter("targetUnlinkUserMapping");
+        targetUnlinkUserMapping = mappingManager.getMapping(targetUnlinkUserMappingName);
 
-        String unlinkSourceUserMappingName = getParameter("unlinkSourceUserMapping");
-        unlinkSourceUserMapping = mappingManager.getMapping(unlinkSourceUserMappingName);
+        String sourceUnlinkUserMappingName = getParameter("sourceUnlinkUserMapping");
+        sourceUnlinkUserMapping = mappingManager.getMapping(sourceUnlinkUserMappingName);
 
         String targetName = getParameter("target");
         if (targetName == null) {
@@ -260,8 +260,9 @@ public class UserSyncModule extends Module {
             session = createAdminSession();
 
             SearchResult sourceEntry = searchSourceUser(session, key);
-            SearchResult targetEntry = searchTargetUser(session, sourceEntry);
+            if (sourceEntry == null) return;
 
+            SearchResult targetEntry = searchTargetUser(session, sourceEntry);
             if (targetEntry == null) return;
 
             linkUser(session, sourceEntry, targetEntry);
@@ -282,7 +283,11 @@ public class UserSyncModule extends Module {
             session = createAdminSession();
 
             SearchResult sourceEntry = searchSourceUser(session, key);
-            unlinkUser(session, sourceEntry);
+            if (sourceEntry == null) return;
+
+            SearchResult targetEntry = getLinkedUser(session, sourceEntry);
+
+            unlinkUser(session, sourceEntry, targetEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -325,43 +330,27 @@ public class UserSyncModule extends Module {
             return null;
         }
 
-        SearchResult targetEntry = searchTargetUser(session, sourceEntry);
+        SearchResult targetEntry = getLinkedUser(session, sourceEntry);
 
         if (targetEntry == null) {
-            if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
-            targetEntry = addUser(session, sourceEntry);
 
-        } else {
-            Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
+            targetEntry = searchTargetUser(session, sourceEntry);
 
-            if (linkAttribute == null) {
-                if (log.isInfoEnabled()) log.info("Linking "+sourceDn);
-                linkUser(session, sourceEntry, targetEntry);
+            if (targetEntry == null) {
+                if (log.isInfoEnabled()) log.info("Adding "+sourceDn);
+                targetEntry = addUser(session, sourceEntry);
 
             } else {
-                if (log.isInfoEnabled()) log.info("Syncing "+sourceDn);
-                syncUser(session, sourceEntry, targetEntry);
+                if (log.isInfoEnabled()) log.info("Linking "+sourceDn);
+                linkUser(session, sourceEntry, targetEntry);
             }
+
+        } else {
+            if (log.isInfoEnabled()) log.info("Syncing "+sourceDn);
+            syncUser(session, sourceEntry, targetEntry);
         }
 
         return targetEntry;
-    }
-
-    public void unlinkUser(Session session, SearchResult sourceEntry) throws Exception {
-
-        DN sourceDn = sourceEntry.getDn();
-        if (log.isInfoEnabled()) log.info("Unlinking "+sourceDn);
-
-        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
-
-        if (linkAttribute == null) {
-            if (log.isInfoEnabled()) log.info("Entry not linked.");
-
-        } else {
-            SearchResult targetEntry = searchTargetUser(session, sourceEntry);
-            if (log.isInfoEnabled()) log.info("Unlinking "+(targetEntry == null ? null : targetEntry.getDn()));
-            unlinkUser(session, sourceEntry, targetEntry);
-        }
     }
 
     public void deleteUser(Session session, SearchResult sourceEntry) throws Exception {
@@ -369,15 +358,12 @@ public class UserSyncModule extends Module {
         DN sourceDn = sourceEntry.getDn();
         if (log.isInfoEnabled()) log.info("Deleting "+sourceDn);
 
-        Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
-
-        if (linkAttribute != null) {
-            SearchResult targetEntry = searchTargetUser(session, sourceEntry);
-            if (targetEntry != null) {
-                DN targetDn = targetEntry.getDn();
-                if (log.isInfoEnabled()) log.info("Deleting "+targetDn);
-                targetFE.delete(session, targetDn);
-            }
+        SearchResult targetEntry = getLinkedUser(session, sourceEntry);
+        
+        if (targetEntry != null) {
+            DN targetDn = targetEntry.getDn();
+            if (log.isInfoEnabled()) log.info("Deleting "+targetDn);
+            targetFE.delete(session, targetDn);
         }
 
         source.delete(session, sourceDn);
@@ -410,14 +396,14 @@ public class UserSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        importSourceUserMapping.map(interpreter, targetAttributes);
+        targetImportUserMapping.map(interpreter, targetAttributes);
 
         String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
         DN targetDn = targetDns.get(normalizedTargetDn);
 
         Attribute dnAttribute = targetAttributes.remove("dn");
         if (targetDn == null) {
-            targetDn = new DN((String)dnAttribute.getValue()).append(targetFE.getBaseDn());
+            targetDn = new DN((String)dnAttribute.getValue());
         }
 
         RDN rdn = targetDn.getRdn();
@@ -463,7 +449,7 @@ public class UserSyncModule extends Module {
         SearchResult targetResult = targetUsersFE.find(session, targetDn);
         targetAttributes = targetResult.getAttributes();
 
-        if (importTargetUserMapping == null) return targetResult;
+        if (sourceImportUserMapping == null) return targetResult;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -473,7 +459,7 @@ public class UserSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        importTargetUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceImportUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse modifyResponse = new ModifyResponse();
@@ -507,7 +493,7 @@ public class UserSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        linkTargetUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        targetLinkUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -515,7 +501,7 @@ public class UserSyncModule extends Module {
             targetFE.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (linkSourceUserMapping == null) return;
+        if (sourceLinkUserMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -525,7 +511,7 @@ public class UserSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        linkSourceUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceLinkUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -557,7 +543,7 @@ public class UserSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        syncSourceUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        targetSyncUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -565,7 +551,7 @@ public class UserSyncModule extends Module {
             targetFE.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (syncSourceUserMapping2 == null) return;
+        if (sourceSyncUserMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -575,7 +561,7 @@ public class UserSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        syncSourceUserMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceSyncUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -631,6 +617,14 @@ public class UserSyncModule extends Module {
         DN sourceDn = sourceEntry.getDn();
         Attributes sourceAttributes = sourceEntry.getAttributes();
 
+        DN targetDn = null;
+        Attributes targetAttributes = null;
+
+        if (targetEntry != null) {
+            targetDn = targetEntry.getDn();
+            targetAttributes = targetEntry.getAttributes();
+        }
+
         log.debug(TextUtil.displaySeparator(60));
         log.debug(TextUtil.displayLine("UNLINK USER", 60));
         log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
@@ -638,12 +632,7 @@ public class UserSyncModule extends Module {
 
         log.debug("");
 
-        DN targetDn = null;
-        Attributes targetAttributes = null;
-
-        if (targetEntry != null) {
-            targetDn = targetEntry.getDn();
-            targetAttributes = targetEntry.getAttributes();
+        if (targetUnlinkUserMapping != null && targetEntry != null) {
 
             ModifyRequest targetModifyRequest = new ModifyRequest();
             targetModifyRequest.setDn(targetDn);
@@ -653,7 +642,7 @@ public class UserSyncModule extends Module {
             interpreter.set("module", this);
             interpreter.set(sourceAlias, sourceAttributes);
 
-            unlinkTargetUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
+            targetUnlinkUserMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
             if (!targetModifyRequest.isEmpty()) {
                 ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -662,22 +651,23 @@ public class UserSyncModule extends Module {
             }
         }
 
-        if (unlinkSourceUserMapping == null) return;
+        if (sourceUnlinkUserMapping != null) {
 
-        ModifyRequest sourceModifyRequest = new ModifyRequest();
-        sourceModifyRequest.setDn(sourceDn);
+            ModifyRequest sourceModifyRequest = new ModifyRequest();
+            sourceModifyRequest.setDn(sourceDn);
 
-        Interpreter interpreter = partition.newInterpreter();
-        interpreter.set("session", session);
-        interpreter.set("module", this);
-        if (targetEntry != null) interpreter.set(targetAlias, targetAttributes);
+            Interpreter interpreter = partition.newInterpreter();
+            interpreter.set("session", session);
+            interpreter.set("module", this);
+            if (targetEntry != null) interpreter.set(targetAlias, targetAttributes);
 
-        unlinkSourceUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+            sourceUnlinkUserMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
-        if (!sourceModifyRequest.isEmpty()) {
-            ModifyResponse sourceModifyResponse = new ModifyResponse();
+            if (!sourceModifyRequest.isEmpty()) {
+                ModifyResponse sourceModifyResponse = new ModifyResponse();
 
-            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+                source.modify(session, sourceModifyRequest, sourceModifyResponse);
+            }
         }
     }
 

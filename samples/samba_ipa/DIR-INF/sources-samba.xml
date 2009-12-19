@@ -13,7 +13,7 @@
     </parameter>
   </source>
 
-  <source name="samba_users">
+  <source name="sambaUsers">
     <connection-name>SambaBE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
@@ -25,7 +25,8 @@
     </parameter>
     <parameter>
       <param-name>attributes</param-name>
-      <param-value>objectClass cn sn sAMAccountName
+      <param-value>
+          objectClass cn sn sAMAccountName
           homeDirectory accountExpires pwdLastSet
           sambaSID lastLogon scriptPath
           profilePath logonCount badPwdCount primaryGroupID
@@ -34,7 +35,7 @@
     </parameter>
   </source>
 
-  <source name="samba_groups">
+  <source name="sambaGroups">
     <connection-name>SambaBE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
@@ -44,9 +45,16 @@
       <param-name>filter</param-name>
       <param-value>(objectClass=group)</param-value>
     </parameter>
+    <parameter>
+      <param-name>attributes</param-name>
+      <param-value>
+          objectClass nsUniqueId sAMAccountName description
+          member sambaSID
+      </param-value>
+    </parameter>
   </source>
 
-  <source name="samba_hosts">
+  <source name="sambaHosts">
     <connection-name>SambaBE</connection-name>
     <parameter>
       <param-name>baseDn</param-name>

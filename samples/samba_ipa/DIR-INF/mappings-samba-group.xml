@@ -7,6 +7,13 @@
 
   <mapping name="ImportSambaGroup">
 
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
     <rule name="dn">
       <expression>
 return "cn="+samba.sAMAccountName+",cn=groups,cn=accounts,dc=example,dc=com";
@@ -18,6 +25,12 @@ return "cn="+samba.sAMAccountName+",cn=groups,cn=accounts,dc=example,dc=com";
     </rule>
     <rule name="objectClass" action="add">
       <constant>posixGroup</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>ipaUserGroup</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>nestedGroup</constant>
     </rule>
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
@@ -36,8 +49,11 @@ return module.transformSourceMembers(session, samba.member);
       </expression>
     </rule>
 
-    <rule name="objectGUID">
-      <variable>samba.objectGUID</variable>
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
     </rule>
     <rule name="sambaSID">
       <variable>samba.sambaSID</variable>
@@ -46,6 +62,13 @@ return module.transformSourceMembers(session, samba.member);
   </mapping>
 
   <mapping name="SyncSambaGroup">
+
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
@@ -61,12 +84,19 @@ return module.transformSourceMembers(session, samba.member);
       </expression>
     </rule>
 
-    <rule name="objectGUID">
-      <variable>samba.objectGUID</variable>
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
     </rule>
     <rule name="sambaSID">
       <variable>samba.sambaSID</variable>
     </rule>
+
+  </mapping>
+
+  <mapping name="LinkSambaGroup">
 
   </mapping>
 
@@ -76,7 +106,7 @@ return module.transformSourceMembers(session, samba.member);
       <constant>extensibleObject</constant>
     </rule>
 
-    <rule name="objectGUID" action="delete"/>
+    <rule name="ntUniqueId" action="delete"/>
     <rule name="sambaSID" action="delete"/>
 
   </mapping>

@@ -116,6 +116,10 @@ public class SambaSyncClient {
             String key = iterator.next();
             syncGroup(partition, key);
 
+        } else if ("link-group".equals(command)) {
+            String key = iterator.next();
+            linkGroup(partition, key);
+
         } else if ("unlink-group".equals(command)) {
             String key = iterator.next();
             unlinkGroup(partition, key);
@@ -313,6 +317,19 @@ public class SambaSyncClient {
         );
     }
 
+    public void linkGroup(String partition, String key) throws Exception {
+        PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
+        PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("SambaIPAGroupModule");
+
+        moduleClient.invoke(
+                "linkGroup",
+                new Object[] { key },
+                new String[] { String.class.getName() }
+        );
+    }
+
     public void unlinkGroup(String partition, String key) throws Exception {
         PartitionManagerClient partitionManagerClient = client.getPartitionManagerClient();
         PartitionClient partitionClient = partitionManagerClient.getPartitionClient(partition);
@@ -430,14 +447,10 @@ public class SambaSyncClient {
             System.exit(0);
         }
 
-        File penroseHome = new File(System.getProperty("penrose.home"));
-
-        //Logger rootLogger = Logger.getRootLogger();
-        //rootLogger.setLevel(Level.OFF);
+        File partitionHome = new File(System.getProperty("partition.home"));
+        File log4jXml = new File(partitionHome, "conf"+File.separator+"log4j.xml");
 
         Logger logger = Logger.getLogger("org.safehaus.penrose");
-
-        File log4jXml = new File(penroseHome, "conf"+File.separator+"log4j.xml");
 
         if (level.equals(Level.DEBUG)) {
             logger.setLevel(level);

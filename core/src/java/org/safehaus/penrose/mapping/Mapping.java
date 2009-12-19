@@ -165,13 +165,8 @@ public class Mapping {
         for (MappingRule rule : getRules()) {
             String name = rule.getName();
             String action = rule.getAction();
-            boolean required = rule.isRequired();
 
-            if (debug) {
-                log.debug(" - Processing mapping rule for "+name);
-                log.debug("   Action: "+action);
-                log.debug("   Required: "+required);
-            }
+            if (debug) log.debug(" - Rule: "+action+" "+name);
 
             Object oldValue = interpreter.get(name);
 
@@ -184,7 +179,7 @@ public class Mapping {
                 }
             }
             
-            if (debug) log.debug("   Old value: "+TextUtil.toString(oldValue, 10));
+            if (debug) log.debug("   Old value: "+TextUtil.toString(oldValue, 20));
 /*
             if (!required && oldValue != null) {
                 if (debug) log.debug(" - Skipping "+name+": value has been set");
@@ -213,7 +208,7 @@ public class Mapping {
             }
 
             Object newValue = interpreter.eval(rule);
-            if (debug) log.debug("   New value: "+TextUtil.toString(newValue, 10));
+            if (debug) log.debug("   New value: "+TextUtil.toString(newValue, 20));
 /*
             if (newValue == null) {
                 if (debug) log.debug(" - Skipping "+name+": value is null");
@@ -361,13 +356,8 @@ public class Mapping {
         for (MappingRule rule : getRules()) {
             String name = rule.getName();
             String action = rule.getAction();
-            boolean required = rule.isRequired();
 
-            if (debug) {
-                log.debug(" - Processing mapping rule for "+name);
-                log.debug("   Action: "+action);
-                log.debug("   Required: "+required);
-            }
+            if (debug) log.debug(" - Rule: "+action+" "+name);
 
             Collection<Object> oldValues = attributes.getValues(name);
             
@@ -380,7 +370,7 @@ public class Mapping {
                 oldValue = oldValues;
             }
 
-            if (debug) log.debug("   Old value: "+TextUtil.toString(oldValue, 10));
+            if (debug) log.debug("   Old value: "+TextUtil.toString(oldValue, 20));
 /*
             if (!required && oldValue != null) {
                 if (debug) log.debug("   ==> Skipping "+name+": value has been set");
@@ -409,7 +399,7 @@ public class Mapping {
             }
 
             Object newValue = interpreter.eval(rule);
-            if (debug) log.debug("   New value: "+TextUtil.toString(newValue, 10));
+            if (debug) log.debug("   New value: "+TextUtil.toString(newValue, 20));
 /*
             if (newValue == null) {
                 if (debug) log.debug(" - Skipping "+name+": value is null");

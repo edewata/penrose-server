@@ -99,5 +99,6 @@ exec "$JAVACMD" $VD_SERVER_OPTS \
 -Djava.ext.dirs="$LOCALLIBPATH" \
 -Djava.library.path="$LOCALLIBPATH" \
 -Dpenrose.home="$VD_SERVER_HOME" \
+-Dpartition.home="$partition_home" \
 -Dpartition.name="$partition_name" \
 org.safehaus.penrose.samba.SambaSyncClient "$@"

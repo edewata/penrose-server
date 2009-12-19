@@ -25,7 +25,7 @@
     </parameter>
   </source>
 
-  <source name="ipa_groups">
+  <source name="ipaGroups">
     <connection-name>IPA</connection-name>
     <parameter>
       <param-name>baseDn</param-name>
@@ -37,7 +37,7 @@
     </parameter>
   </source>
 
-  <source name="ipa_hosts">
+  <source name="ipaHosts">
     <connection-name>IPA</connection-name>
     <parameter>
       <param-name>baseDn</param-name>

@@ -12,6 +12,7 @@ import org.safehaus.penrose.mapping.MappingManager;
 import org.safehaus.penrose.interpreter.Interpreter;
 import org.safehaus.penrose.filter.Filter;
 import org.safehaus.penrose.filter.SimpleFilter;
+import org.ietf.ldap.LDAPException;
 
 import java.util.*;
 
@@ -20,32 +21,37 @@ import java.util.*;
  */
 public class GroupSyncModule extends Module {
 
-    LDAPSource source;
-    LDAPSource sourceUsers;
-    LDAPSource sourceGroups;
-    LDAPSource target;
-    LDAPSource targetGroups;
+    protected String sourceAlias;
+    protected LDAPSource source;
+    protected LDAPSource sourceUsers;
+    protected LDAPSource sourceGroups;
 
-    String sourceKeyAttribute;
-    String sourceLinkAttribute;
-    String targetKeyAttribute;
-    String targetLinkAttribute;
+    protected String targetAlias;
+    protected LDAPSource target;
+    protected LDAPSource targetGroups;
 
-    Mapping importSourceGroupMapping;
-    Mapping importSourceGroupMapping2;
-    Mapping syncSourceGroupMapping;
-    Mapping syncSourceGroupMapping2;
-    Mapping unlinkSourceGroupMapping;
-    Mapping unlinkSourceGroupMapping2;
+    protected String sourceKeyAttribute;
+    protected String sourceLinkAttribute;
+    protected String targetKeyAttribute;
+    protected String targetLinkAttribute;
 
-    Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
-    Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
-    Map<String,DN> targetDns = new LinkedHashMap<String,DN>();
-    Map<String,String> targetDnMapping = new LinkedHashMap<String,String>();
+    protected Mapping importSourceGroupMapping;
+    protected Mapping importTargetGroupMapping;
+    protected Mapping linkSourceGroupMapping;
+    protected Mapping linkTargetGroupMapping;
+    protected Mapping syncSourceGroupMapping;
+    protected Mapping syncTargetGroupMapping;
+    protected Mapping unlinkSourceGroupMapping;
+    protected Mapping unlinkTargetGroupMapping;
 
-    Set<String> ignoredDns = new HashSet<String>();
+    protected Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
+    protected Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
+    protected Map<String,DN> targetDns = new LinkedHashMap<String,DN>();
+    protected Map<String,String> targetDnMapping = new LinkedHashMap<String,String>();
 
-    UserSyncModule userSyncModule;
+    protected Set<String> ignoredDns = new HashSet<String>();
+
+    protected UserSyncModule userSyncModule;
 
     public GroupSyncModule() {
     }
@@ -63,6 +69,11 @@ public class GroupSyncModule extends Module {
         String sourceName = getParameter("source");
         source = (LDAPSource)sourceManager.getSource(sourceName);
 
+        sourceAlias = getParameter("sourceAlias");
+        if (sourceAlias == null) {
+            sourceAlias = source.getName();
+        }
+
         String sourceUsersName = getParameter("sourceUsers");
         sourceUsers = (LDAPSource)sourceManager.getSource(sourceUsersName);
 
@@ -75,23 +86,34 @@ public class GroupSyncModule extends Module {
         String importSourceGroupMappingName = getParameter("importSourceGroupMapping");
         importSourceGroupMapping = mappingManager.getMapping(importSourceGroupMappingName);
 
-        String importSourceGroupMapping2Name = getParameter("importSourceGroupMapping2");
-        importSourceGroupMapping2 = mappingManager.getMapping(importSourceGroupMapping2Name);
+        String importTargetGroupMappingName = getParameter("importTargetGroupMapping");
+        importTargetGroupMapping = mappingManager.getMapping(importTargetGroupMappingName);
+
+        String linkSourceGroupMappingName = getParameter("linkSourceGroupMapping");
+        linkSourceGroupMapping = mappingManager.getMapping(linkSourceGroupMappingName);
+
+        String linkTargetGroupMappingName = getParameter("linkTargetGroupMapping");
+        linkTargetGroupMapping = mappingManager.getMapping(linkTargetGroupMappingName);
 
         String syncSourceGroupMappingName = getParameter("syncSourceGroupMapping");
         syncSourceGroupMapping = mappingManager.getMapping(syncSourceGroupMappingName);
 
-        String syncSourceGroupMapping2Name = getParameter("syncSourceGroupMapping2");
-        syncSourceGroupMapping2 = mappingManager.getMapping(syncSourceGroupMapping2Name);
+        String syncTargetGroupMappingName = getParameter("syncTargetGroupMapping");
+        syncTargetGroupMapping = mappingManager.getMapping(syncTargetGroupMappingName);
 
         String unlinkSourceGroupMappingName = getParameter("unlinkSourceGroupMapping");
         unlinkSourceGroupMapping = mappingManager.getMapping(unlinkSourceGroupMappingName);
 
-        String unlinkSourceGroupMapping2Name = getParameter("unlinkSourceGroupMapping2");
-        unlinkSourceGroupMapping2 = mappingManager.getMapping(unlinkSourceGroupMapping2Name);
+        String unlinkTargetGroupMappingName = getParameter("unlinkTargetGroupMapping");
+        unlinkTargetGroupMapping = mappingManager.getMapping(unlinkTargetGroupMappingName);
 
         String targetName = getParameter("target");
         target = (LDAPSource)sourceManager.getSource(targetName);
+
+        targetAlias = getParameter("targetAlias");
+        if (targetAlias == null) {
+            targetAlias = target.getName();
+        }
 
         String targetGroupsName = getParameter("targetGroups");
         targetGroups = (LDAPSource)sourceManager.getSource(targetGroupsName);
@@ -199,6 +221,28 @@ public class GroupSyncModule extends Module {
 
             SearchResult sourceEntry = searchSourceGroup(session, key);
             syncGroup(session, sourceEntry);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void linkGroup(String key) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            SearchResult sourceEntry = searchSourceGroup(session, key);
+            SearchResult targetEntry = searchTargetGroup(session, sourceEntry);
+
+            if (targetEntry == null) return;
+
+            linkGroup(session, sourceEntry, targetEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -323,7 +367,7 @@ public class GroupSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(source.getName(), sourceAttributes);
+        interpreter.set(sourceAlias, sourceAttributes);
 
         importSourceGroupMapping.map(interpreter, targetAttributes);
 
@@ -335,18 +379,50 @@ public class GroupSyncModule extends Module {
             targetDn = new DN((String)dnAttribute.getValue());
         }
 
-        AddRequest addRequest = new AddRequest();
-        addRequest.setDn(targetDn);
-        addRequest.setAttributes(targetAttributes);
+        RDN rdn = targetDn.getRdn();
+        String rdnAttribute = rdn.getName();
+        Object rdnValue = rdn.getValue();
 
-        AddResponse addResponse = new AddResponse();
+        int counter = 0;
+        boolean done = false;
 
-        target.add(session, addRequest, addResponse);
+        while (!done) {
+            AddRequest addRequest = new AddRequest();
+            addRequest.setDn(targetDn);
+            addRequest.setAttributes(targetAttributes);
+
+            AddResponse addResponse = new AddResponse();
+
+            try {
+                target.add(session, addRequest, addResponse);
+                done = true;
+
+            } catch (LDAPException e) {
+                log.error("Error: "+e.getMessage());
+
+                if (e.getResultCode() == LDAP.ENTRY_ALREADY_EXISTS) {
+
+                    ++counter;
+                    Object newValue = rdnValue.toString()+" "+counter;
+
+                    RDNBuilder rb = new RDNBuilder();
+                    rb.set(rdnAttribute, newValue);
+                    rdn = rb.toRdn();
+
+                    targetDn = rdn.append(targetDn.getParentDn());
+                    targetAttributes.setValue(rdnAttribute, newValue);
+                    log.debug("New target DN: "+targetDn);
+
+                } else {
+                    throw e;
+                }
+            }
+        }
 
         SearchResult targetResult = target.find(session, targetDn);
         targetAttributes = targetResult.getAttributes();
 
-        if (importSourceGroupMapping2 == null) return targetResult;
+        if (importTargetGroupMapping == null) return targetResult;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -354,9 +430,9 @@ public class GroupSyncModule extends Module {
         interpreter.clear();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(target.getName(), targetAttributes);
+        interpreter.set(targetAlias, targetAttributes);
 
-        importSourceGroupMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        importTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -388,7 +464,7 @@ public class GroupSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(source.getName(), sourceAttributes);
+        interpreter.set(sourceAlias, sourceAttributes);
 
         syncSourceGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
@@ -398,7 +474,7 @@ public class GroupSyncModule extends Module {
             target.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (syncSourceGroupMapping2 == null) return;
+        if (syncTargetGroupMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -406,9 +482,59 @@ public class GroupSyncModule extends Module {
         interpreter.clear();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        interpreter.set(target.getName(), targetAttributes);
+        interpreter.set(targetAlias, targetAttributes);
 
-        syncSourceGroupMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        syncTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+
+        if (!sourceModifyRequest.isEmpty()) {
+            ModifyResponse sourceModifyResponse = new ModifyResponse();
+
+            source.modify(session, sourceModifyRequest, sourceModifyResponse);
+        }
+    }
+
+    public void linkGroup(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+
+        DN sourceDn = sourceEntry.getDn();
+        Attributes sourceAttributes = sourceEntry.getAttributes();
+
+        log.debug(TextUtil.displaySeparator(60));
+        log.debug(TextUtil.displayLine("LINK GROUP", 60));
+        log.debug(TextUtil.displayLine(" - "+sourceDn, 60));
+        log.debug(TextUtil.displaySeparator(60));
+
+        log.debug("");
+
+        DN targetDn = targetEntry.getDn();
+        Attributes targetAttributes = targetEntry.getAttributes();
+
+        ModifyRequest targetModifyRequest = new ModifyRequest();
+        targetModifyRequest.setDn(targetDn);
+
+        Interpreter interpreter = partition.newInterpreter();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(sourceAlias, sourceAttributes);
+
+        linkTargetGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+
+        if (!targetModifyRequest.isEmpty()) {
+            ModifyResponse targetModifyResponse = new ModifyResponse();
+
+            target.modify(session, targetModifyRequest, targetModifyResponse);
+        }
+
+        if (linkSourceGroupMapping == null) return;
+
+        ModifyRequest sourceModifyRequest = new ModifyRequest();
+        sourceModifyRequest.setDn(sourceDn);
+
+        interpreter.clear();
+        interpreter.set("session", session);
+        interpreter.set("module", this);
+        interpreter.set(targetAlias, targetAttributes);
+
+        linkSourceGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -442,7 +568,7 @@ public class GroupSyncModule extends Module {
             Interpreter interpreter = partition.newInterpreter();
             interpreter.set("session", session);
             interpreter.set("module", this);
-            interpreter.set(source.getName(), sourceAttributes);
+            interpreter.set(sourceAlias, sourceAttributes);
 
             unlinkSourceGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
@@ -453,7 +579,7 @@ public class GroupSyncModule extends Module {
             }
         }
 
-        if (unlinkSourceGroupMapping2 == null) return;
+        if (unlinkTargetGroupMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -461,9 +587,9 @@ public class GroupSyncModule extends Module {
         Interpreter interpreter = partition.newInterpreter();
         interpreter.set("session", session);
         interpreter.set("module", this);
-        if (targetEntry != null) interpreter.set(target.getName(), targetAttributes);
+        if (targetEntry != null) interpreter.set(targetAlias, targetAttributes);
 
-        unlinkSourceGroupMapping2.map(interpreter, sourceAttributes, sourceModifyRequest);
+        unlinkTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -596,7 +722,7 @@ public class GroupSyncModule extends Module {
 
                 SearchResponse targetResponse = new SearchResponse();
 
-                target.search(session, targetRequest, targetResponse);
+                targetGroups.search(session, targetRequest, targetResponse);
 
                 if (targetResponse.hasNext()) {
                     targetEntry = targetResponse.next();
@@ -671,15 +797,15 @@ public class GroupSyncModule extends Module {
     public DN transformSourceMember(Session session, DN sourceMemberDn) throws Exception {
         if (log.isInfoEnabled()) log.info("Transforming source member: "+sourceMemberDn);
 
-        SearchResult sourceMemberEntry = source.find(session, sourceMemberDn);
+        SearchResult sourceMemberEntry = sourceUsers.find(session, sourceMemberDn);
         if (sourceMemberEntry == null) {
-            if (log.isDebugEnabled()) log.debug("==> Source entry not found.");
+            if (log.isDebugEnabled()) log.debug("==> Source member not found.");
             return null;
         }
 
         SearchResult targetMemberEntry = userSyncModule.getLinkedUser(session, sourceMemberEntry);
         if (targetMemberEntry == null) {
-            if (log.isDebugEnabled()) log.debug("==> Target entry not found.");
+            if (log.isDebugEnabled()) log.debug("==> Target member not found.");
 
             Attribute objectClass = sourceMemberEntry.getAttribute("objectClass");
             if (objectClass.containsValue("person")) {

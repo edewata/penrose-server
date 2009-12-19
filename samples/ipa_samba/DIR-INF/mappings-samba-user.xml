@@ -5,54 +5,63 @@
 
 <mappings>
 
-  <mapping name="ImportSambaUser">
+  <mapping name="SambaImportUser">
 
-    <pre>
-import org.safehaus.penrose.samba.*;
-if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
-    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
-}
-    </pre>
-
-    <rule name="objectClass" action="add">
-      <constant>extensibleObject</constant>
-    </rule>
-
-    <rule name="ntUniqueId">
+    <rule name="dn">
       <expression>
-import org.safehaus.penrose.samba.*;
-return Samba.toStringGUID(samba.objectGUID);
+return "CN="+ipa.cn+",CN=Users,DC=samba,DC=example,DC=com";
       </expression>
     </rule>
-    <rule name="sambaSID">
-      <variable>samba.sambaSID</variable>
+
+    <rule name="objectClass">
+      <constant>user</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>person</constant>
+    </rule>
+    <rule name="objectClass" action="add">
+      <constant>organizationalPerson</constant>
     </rule>
 
-    <rule name="lastLogon">
-      <variable>samba.lastLogon</variable>
+    <rule name="cn">
+      <variable>ipa.cn</variable>
     </rule>
-    <rule name="scriptPath">
-      <variable>samba.scriptPath</variable>
+    <rule name="sn">
+      <variable>ipa.sn</variable>
     </rule>
-    <rule name="profilePath">
-      <variable>samba.profilePath</variable>
+    <rule name="sAMAccountName">
+      <variable>ipa.uid</variable>
     </rule>
-    <rule name="logonCount">
-      <variable>samba.logonCount</variable>
+    <rule name="homeDirectory">
+      <variable>ipa.homeDirectory</variable>
     </rule>
-    <rule name="badPwdCount">
-      <variable>samba.badPwdCount</variable>
+
+    <rule name="accountExpires">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (ipa.krbPasswordExpiration == void || ipa.krbPasswordExpiration == null) return null;
+return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbPasswordExpiration));
+      </expression>
     </rule>
-    <rule name="primaryGroupID">
-      <variable>samba.primaryGroupID</variable>
+    <rule name="pwdLastSet">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (ipa.krbLastPwdChange == void || ipa.krbLastPwdChange == null) return null;
+return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
+      </expression>
     </rule>
+
     <rule name="userAccountControl">
-      <constant>samba.userAccountControl</constant>
+      <constant>640</constant>
     </rule>
 
   </mapping>
 
-  <mapping name="LinkSambaUser">
+  <mapping name="SambaLinkUser">
 
     <rule name="sn">
       <variable>ipa.sn</variable>
@@ -82,7 +91,59 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
 
   </mapping>
 
-  <mapping name="UnlinkSambaUser">
+  <mapping name="SambaSyncUser">
+
+    <rule name="sn">
+      <variable>ipa.sn</variable>
+    </rule>
+    <rule name="homeDirectory">
+      <variable>ipa.homeDirectory</variable>
+    </rule>
+
+    <rule name="accountExpires">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (ipa.krbPasswordExpiration == void || ipa.krbPasswordExpiration == null) return null;
+return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbPasswordExpiration));
+      </expression>
+    </rule>
+    <rule name="pwdLastSet">
+      <expression>
+import org.safehaus.penrose.ad.*;
+import org.safehaus.penrose.ipa.*;
+
+if (ipa.krbLastPwdChange == void || ipa.krbLastPwdChange == null) return null;
+return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
+      </expression>
+    </rule>
+
+    <rule name="lastLogon">
+      <variable>ipa.lastLogon</variable>
+    </rule>
+    <rule name="scriptPath">
+      <variable>ipa.scriptPath</variable>
+    </rule>
+    <rule name="profilePath">
+      <variable>ipa.profilePath</variable>
+    </rule>
+    <rule name="logonCount">
+      <variable>ipa.logonCount</variable>
+    </rule>
+    <rule name="badPwdCount">
+      <variable>ipa.badPwdCount</variable>
+    </rule>
+    <rule name="primaryGroupID">
+      <variable>ipa.primaryGroupID</variable>
+    </rule>
+    <rule name="userAccountControl">
+      <variable>ipa.userAccountControl</variable>
+    </rule>
+
+  </mapping>
+
+  <mapping name="SambaUnlinkUser">
 
   </mapping>
 

@@ -13,7 +13,7 @@
     </parameter>
     <parameter>
       <param-name>sourceUsers</param-name>
-      <param-value>samba_users</param-value>
+      <param-value>sambaUsers</param-value>
     </parameter>
     <parameter>
       <param-name>sourceKeyAttribute</param-name>
@@ -24,24 +24,24 @@
       <param-value>nsUniqueId</param-value>
     </parameter>
     <parameter>
-      <param-name>importSourceUserMapping</param-name>
-      <param-value>ImportSambaUser</param-value>
+      <param-name>targetImportUserMapping</param-name>
+      <param-value>IPAImportUser</param-value>
     </parameter>
     <parameter>
-      <param-name>linkTargetUserMapping</param-name>
-      <param-value>LinkIPAUser</param-value>
+      <param-name>targetLinkUserMapping</param-name>
+      <param-value>IPALinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>linkSourceUserMapping</param-name>
-      <param-value>LinkSambaUser</param-value>
+      <param-name>sourceLinkUserMapping</param-name>
+      <param-value>SambaLinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>syncSourceUserMapping</param-name>
-      <param-value>SyncSambaUser</param-value>
+      <param-name>targetSyncUserMapping</param-name>
+      <param-value>IPASyncUser</param-value>
     </parameter>
     <parameter>
-      <param-name>unlinkTargetUserMapping</param-name>
-      <param-value>UnlinkIPAUser</param-value>
+      <param-name>targetUnlinkUserMapping</param-name>
+      <param-value>IPAUnlinkUser</param-value>
     </parameter>
     <parameter>
       <param-name>target</param-name>
@@ -77,11 +77,11 @@
     </parameter>
     <parameter>
       <param-name>sourceUsers</param-name>
-      <param-value>samba_users</param-value>
+      <param-value>sambaUsers</param-value>
     </parameter>
     <parameter>
       <param-name>sourceGroups</param-name>
-      <param-value>samba_groups</param-value>
+      <param-value>sambaGroups</param-value>
     </parameter>
     <parameter>
       <param-name>sourceKeyAttribute</param-name>
@@ -89,7 +89,7 @@
     </parameter>
     <parameter>
       <param-name>sourceLinkAttribute</param-name>
-      <param-value>objectGUID</param-value>
+      <param-value>nsUniqueId</param-value>
     </parameter>
     <parameter>
       <param-name>importSourceGroupMapping</param-name>
@@ -109,7 +109,7 @@
     </parameter>
     <parameter>
       <param-name>targetGroups</param-name>
-      <param-value>ipa_groups</param-value>
+      <param-value>ipaGroups</param-value>
     </parameter>
     <parameter>
       <param-name>targetKeyAttribute</param-name>
@@ -117,7 +117,7 @@
     </parameter>
     <parameter>
       <param-name>targetLinkAttribute</param-name>
-      <param-value>objectGUID</param-value>
+      <param-value>ntUniqueId</param-value>
     </parameter>
     <parameter>
       <param-name>userSyncModule</param-name>
@@ -133,15 +133,15 @@
     </parameter>
     <parameter>
       <param-name>sourceUsers</param-name>
-      <param-value>samba_users</param-value>
+      <param-value>sambaUsers</param-value>
     </parameter>
     <parameter>
       <param-name>sourceGroups</param-name>
-      <param-value>samba_groups</param-value>
+      <param-value>sambaGroups</param-value>
     </parameter>
     <parameter>
       <param-name>sourceHosts</param-name>
-      <param-value>samba_hosts</param-value>
+      <param-value>sambaHosts</param-value>
     </parameter>
     <parameter>
       <param-name>target</param-name>
@@ -149,15 +149,15 @@
     </parameter>
     <parameter>
       <param-name>targetUsers</param-name>
-      <param-value>ipa_users</param-value>
+      <param-value>ipaUsers</param-value>
     </parameter>
     <parameter>
       <param-name>targetGroups</param-name>
-      <param-value>ipa_groups</param-value>
+      <param-value>ipaGroups</param-value>
     </parameter>
     <parameter>
       <param-name>targetHosts</param-name>
-      <param-value>ipa_hosts</param-value>
+      <param-value>ipaHosts</param-value>
     </parameter>
     <parameter>
       <param-name>changelog</param-name>

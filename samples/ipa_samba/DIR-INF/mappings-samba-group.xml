@@ -5,7 +5,7 @@
 
 <mappings>
 
-  <mapping name="ImportIPAGroup2">
+  <mapping name="ImportSambaGroup">
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
@@ -20,7 +20,7 @@
 
   </mapping>
 
-  <mapping name="SyncIPAGroup2">
+  <mapping name="SyncSambaGroup">
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
@@ -35,7 +35,7 @@
 
   </mapping>
 
-  <mapping name="UnlinkIPAGroup2">
+  <mapping name="UnlinkSambaGroup">
 
     <rule name="objectClass" action="delete">
       <constant>extensibleObject</constant>
