@@ -34,14 +34,14 @@ public class UserSyncModule extends Module {
     protected String targetKeyAttribute;
     protected String targetLinkAttribute;
 
-    protected Mapping targetImportUserMapping;
     protected Mapping sourceImportUserMapping;
-    protected Mapping targetLinkUserMapping;
+    protected Mapping targetImportUserMapping;
     protected Mapping sourceLinkUserMapping;
-    protected Mapping targetSyncUserMapping;
+    protected Mapping targetLinkUserMapping;
     protected Mapping sourceSyncUserMapping;
-    protected Mapping targetUnlinkUserMapping;
+    protected Mapping targetSyncUserMapping;
     protected Mapping sourceUnlinkUserMapping;
+    protected Mapping targetUnlinkUserMapping;
 
     protected Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
     protected Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
@@ -76,29 +76,29 @@ public class UserSyncModule extends Module {
         sourceKeyAttribute = getParameter("sourceKeyAttribute");
         sourceLinkAttribute = getParameter("sourceLinkAttribute");
 
-        String targetImportUserMappingName = getParameter("targetImportUserMapping");
-        targetImportUserMapping = mappingManager.getMapping(targetImportUserMappingName);
-
         String sourceImportUserMappingName = getParameter("sourceImportUserMapping");
         sourceImportUserMapping = mappingManager.getMapping(sourceImportUserMappingName);
 
-        String targetLinkUserMappingName = getParameter("targetLinkUserMapping");
-        targetLinkUserMapping = mappingManager.getMapping(targetLinkUserMappingName);
+        String targetImportUserMappingName = getParameter("targetImportUserMapping");
+        targetImportUserMapping = mappingManager.getMapping(targetImportUserMappingName);
 
         String sourceLinkUserMappingName = getParameter("sourceLinkUserMapping");
         sourceLinkUserMapping = mappingManager.getMapping(sourceLinkUserMappingName);
 
-        String targetSyncUserMappingName = getParameter("targetSyncUserMapping");
-        targetSyncUserMapping = mappingManager.getMapping(targetSyncUserMappingName);
+        String targetLinkUserMappingName = getParameter("targetLinkUserMapping");
+        targetLinkUserMapping = mappingManager.getMapping(targetLinkUserMappingName);
 
         String sourceSyncUserMappingName = getParameter("sourceSyncUserMapping");
         sourceSyncUserMapping = mappingManager.getMapping(sourceSyncUserMappingName);
 
-        String targetUnlinkUserMappingName = getParameter("targetUnlinkUserMapping");
-        targetUnlinkUserMapping = mappingManager.getMapping(targetUnlinkUserMappingName);
+        String targetSyncUserMappingName = getParameter("targetSyncUserMapping");
+        targetSyncUserMapping = mappingManager.getMapping(targetSyncUserMappingName);
 
         String sourceUnlinkUserMappingName = getParameter("sourceUnlinkUserMapping");
         sourceUnlinkUserMapping = mappingManager.getMapping(sourceUnlinkUserMappingName);
+
+        String targetUnlinkUserMappingName = getParameter("targetUnlinkUserMapping");
+        targetUnlinkUserMapping = mappingManager.getMapping(targetUnlinkUserMappingName);
 
         String targetName = getParameter("target");
         if (targetName == null) {

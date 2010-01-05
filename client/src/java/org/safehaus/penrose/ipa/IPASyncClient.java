@@ -383,28 +383,23 @@ public class IPASyncClient {
         System.out.println("  -v                 run in verbose mode");
         System.out.println();
         System.out.println("Commands:");
-        System.out.println("  sync                      Sync all.");
-        System.out.println("  sync-users                Sync all users.");
-        System.out.println("  sync-ipa-users            Sync all IPA users.");
-        System.out.println("  sync-ipa-user <key>       Sync IPA user.");
-        System.out.println("  unlink-ipa-user <key>     Unlink IPA user.");
-        System.out.println("  delete-ipa-user <key>     Delete IPA user.");
-        System.out.println("  sync-samba-users          Sync all Samba users.");
-        System.out.println("  sync-samba-user <key>     Sync Samba user.");
-        System.out.println("  unlink-samba-user <key>   Unlink Samba user.");
-        System.out.println("  delete-samba-user <key>   Delete Samba user.");
-        System.out.println("  sync-groups               Sync all groups.");
-        System.out.println("  sync-ipa-groups           Sync all IPA groups.");
-        System.out.println("  sync-ipa-group <key>      Sync IPA group.");
-        System.out.println("  unlink-ipa-group <key>    Unlink IPA group.");
-        System.out.println("  delete-ipa-group <key>    Delete IPA group.");
-        System.out.println("  sync-samba-groups         Sync all Samba group.");
-        System.out.println("  sync-samba-group <key>    Sync Samba group.");
-        System.out.println("  unlink-samba-group <key>  Unlink Samba group.");
-        System.out.println("  delete-samba-group <key>  Delete Samba group.");
-        System.out.println("  sync-hosts                Sync hosts.");
-        System.out.println("  sync-ipa-host <key>       Sync IPA host.");
-        System.out.println("  sync-samba-host <key>     Sync Samba host.");
+        System.out.println("  sync                Sync all.");
+        System.out.println("  sync-users          Sync all users.");
+        System.out.println("  sync-user <key>     Sync user.");
+        System.out.println("  show-users          Show users.");
+        System.out.println("  show-user <key>     Show user.");
+        System.out.println("  link-user <key>     Link user.");
+        System.out.println("  unlink-user <key>   Unlink user.");
+        System.out.println("  delete-user <key>   Delete user.");
+        System.out.println("  sync-groups         Sync all groups.");
+        System.out.println("  sync-group <key>    Sync group.");
+        System.out.println("  show-groups         Show groups.");
+        System.out.println("  show-group <key>    Show group.");
+        System.out.println("  link-group <key>    Link group.");
+        System.out.println("  unlink-group <key>  Unlink group.");
+        System.out.println("  delete-group <key>  Delete group.");
+        System.out.println("  sync-hosts          Sync hosts.");
+        System.out.println("  sync-host <key>     Sync host.");
     }
 
     public static void main(String args[]) throws Exception {

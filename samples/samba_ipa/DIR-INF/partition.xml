@@ -14,4 +14,8 @@
   <mapping-file>DIR-INF/mappings-ipa-user.xml</mapping-file>
   <mapping-file>DIR-INF/mappings-ipa-group.xml</mapping-file>
 
+  <module-file>DIR-INF/modules-user.xml</module-file>
+  <module-file>DIR-INF/modules-group.xml</module-file>
+  <module-file>DIR-INF/modules-monitor.xml</module-file>
+
 </partition>

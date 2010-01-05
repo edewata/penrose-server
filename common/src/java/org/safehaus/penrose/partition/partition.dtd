@@ -6,7 +6,9 @@
         adapter*,
         interpreter*,
         thread-manager?,
+        source-file*,
         mapping-file*,
+        module-file*,
         parameter*
 )>
 
@@ -30,7 +32,9 @@
 <!ATTLIST thread-manager enabled CDATA #IMPLIED>
 <!ELEMENT thread-manager-class (#PCDATA)>
 
+<!ELEMENT source-file (#PCDATA)>
 <!ELEMENT mapping-file (#PCDATA)>
+<!ELEMENT module-file (#PCDATA)>
 
 <!ELEMENT parameter (param-name, param-value)>
 <!ELEMENT param-name (#PCDATA)>

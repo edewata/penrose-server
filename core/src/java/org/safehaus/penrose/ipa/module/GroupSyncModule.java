@@ -35,14 +35,14 @@ public class GroupSyncModule extends Module {
     protected String targetKeyAttribute;
     protected String targetLinkAttribute;
 
-    protected Mapping importSourceGroupMapping;
-    protected Mapping importTargetGroupMapping;
-    protected Mapping linkSourceGroupMapping;
-    protected Mapping linkTargetGroupMapping;
-    protected Mapping syncSourceGroupMapping;
-    protected Mapping syncTargetGroupMapping;
-    protected Mapping unlinkSourceGroupMapping;
-    protected Mapping unlinkTargetGroupMapping;
+    protected Mapping sourceImportGroupMapping;
+    protected Mapping targetImportGroupMapping;
+    protected Mapping sourceLinkGroupMapping;
+    protected Mapping targetLinkGroupMapping;
+    protected Mapping sourceSyncGroupMapping;
+    protected Mapping targetSyncGroupMapping;
+    protected Mapping sourceUnlinkGroupMapping;
+    protected Mapping targetUnlinkGroupMapping;
 
     protected Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
     protected Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
@@ -83,29 +83,29 @@ public class GroupSyncModule extends Module {
         sourceKeyAttribute = getParameter("sourceKeyAttribute");
         sourceLinkAttribute = getParameter("sourceLinkAttribute");
 
-        String importSourceGroupMappingName = getParameter("importSourceGroupMapping");
-        importSourceGroupMapping = mappingManager.getMapping(importSourceGroupMappingName);
+        String sourceImportGroupMappingName = getParameter("sourceImportGroupMapping");
+        sourceImportGroupMapping = mappingManager.getMapping(sourceImportGroupMappingName);
 
-        String importTargetGroupMappingName = getParameter("importTargetGroupMapping");
-        importTargetGroupMapping = mappingManager.getMapping(importTargetGroupMappingName);
+        String targetImportGroupMappingName = getParameter("targetImportGroupMapping");
+        targetImportGroupMapping = mappingManager.getMapping(targetImportGroupMappingName);
 
-        String linkSourceGroupMappingName = getParameter("linkSourceGroupMapping");
-        linkSourceGroupMapping = mappingManager.getMapping(linkSourceGroupMappingName);
+        String sourceLinkGroupMappingName = getParameter("sourceLinkGroupMapping");
+        sourceLinkGroupMapping = mappingManager.getMapping(sourceLinkGroupMappingName);
 
-        String linkTargetGroupMappingName = getParameter("linkTargetGroupMapping");
-        linkTargetGroupMapping = mappingManager.getMapping(linkTargetGroupMappingName);
+        String targetLinkGroupMappingName = getParameter("targetLinkGroupMapping");
+        targetLinkGroupMapping = mappingManager.getMapping(targetLinkGroupMappingName);
 
-        String syncSourceGroupMappingName = getParameter("syncSourceGroupMapping");
-        syncSourceGroupMapping = mappingManager.getMapping(syncSourceGroupMappingName);
+        String sourceSyncGroupMappingName = getParameter("sourceSyncGroupMapping");
+        sourceSyncGroupMapping = mappingManager.getMapping(sourceSyncGroupMappingName);
 
-        String syncTargetGroupMappingName = getParameter("syncTargetGroupMapping");
-        syncTargetGroupMapping = mappingManager.getMapping(syncTargetGroupMappingName);
+        String targetSyncGroupMappingName = getParameter("targetSyncGroupMapping");
+        targetSyncGroupMapping = mappingManager.getMapping(targetSyncGroupMappingName);
 
-        String unlinkSourceGroupMappingName = getParameter("unlinkSourceGroupMapping");
-        unlinkSourceGroupMapping = mappingManager.getMapping(unlinkSourceGroupMappingName);
+        String sourceUnlinkGroupMappingName = getParameter("sourceUnlinkGroupMapping");
+        sourceUnlinkGroupMapping = mappingManager.getMapping(sourceUnlinkGroupMappingName);
 
-        String unlinkTargetGroupMappingName = getParameter("unlinkTargetGroupMapping");
-        unlinkTargetGroupMapping = mappingManager.getMapping(unlinkTargetGroupMappingName);
+        String targetUnlinkGroupMappingName = getParameter("targetUnlinkGroupMapping");
+        targetUnlinkGroupMapping = mappingManager.getMapping(targetUnlinkGroupMappingName);
 
         String targetName = getParameter("target");
         target = (LDAPSource)sourceManager.getSource(targetName);
@@ -238,8 +238,9 @@ public class GroupSyncModule extends Module {
             session = createAdminSession();
 
             SearchResult sourceEntry = searchSourceGroup(session, key);
-            SearchResult targetEntry = searchTargetGroup(session, sourceEntry);
+            if (sourceEntry == null) return;
 
+            SearchResult targetEntry = searchTargetGroup(session, sourceEntry);
             if (targetEntry == null) return;
 
             linkGroup(session, sourceEntry, targetEntry);
@@ -369,7 +370,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        importSourceGroupMapping.map(interpreter, targetAttributes);
+        targetImportGroupMapping.map(interpreter, targetAttributes);
 
         String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
         DN targetDn = targetDns.get(normalizedTargetDn);
@@ -422,7 +423,7 @@ public class GroupSyncModule extends Module {
         SearchResult targetResult = target.find(session, targetDn);
         targetAttributes = targetResult.getAttributes();
 
-        if (importTargetGroupMapping == null) return targetResult;
+        if (sourceImportGroupMapping == null) return targetResult;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -432,7 +433,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        importTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceImportGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -466,7 +467,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        syncSourceGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        targetSyncGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -474,7 +475,7 @@ public class GroupSyncModule extends Module {
             target.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (syncTargetGroupMapping == null) return;
+        if (sourceSyncGroupMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -484,7 +485,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        syncTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceSyncGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -516,7 +517,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        linkTargetGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        targetLinkGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -524,7 +525,7 @@ public class GroupSyncModule extends Module {
             target.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (linkSourceGroupMapping == null) return;
+        if (sourceLinkGroupMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -534,7 +535,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        linkSourceGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceLinkGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -570,7 +571,7 @@ public class GroupSyncModule extends Module {
             interpreter.set("module", this);
             interpreter.set(sourceAlias, sourceAttributes);
 
-            unlinkSourceGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+            targetUnlinkGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
             if (!targetModifyRequest.isEmpty()) {
                 ModifyResponse targetModifyResponse = new ModifyResponse();
@@ -579,7 +580,7 @@ public class GroupSyncModule extends Module {
             }
         }
 
-        if (unlinkTargetGroupMapping == null) return;
+        if (sourceUnlinkGroupMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -589,7 +590,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         if (targetEntry != null) interpreter.set(targetAlias, targetAttributes);
 
-        unlinkTargetGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceUnlinkGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
