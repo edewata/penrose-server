@@ -5,44 +5,58 @@
 
 <mappings>
 
-  <mapping name="ImportSambaGroup">
+  <mapping name="SambaImportGroup">
 
-    <rule name="objectClass" action="add">
-      <constant>extensibleObject</constant>
+    <rule name="dn">
+      <expression>
+return "CN="+ipa.cn+",CN=Users,DC=samba,DC=example,DC=com";
+      </expression>
     </rule>
 
-    <rule name="objectGUID">
-      <variable>samba.objectGUID</variable>
+    <rule name="objectClass">
+      <constant>group</constant>
     </rule>
-    <rule name="objectSid">
-      <variable>samba.objectSid</variable>
+
+    <rule name="cn">
+      <variable>ipa.cn</variable>
+    </rule>
+    <rule name="sAMAccountName">
+      <variable>ipa.cn</variable>
+    </rule>
+    <rule name="description">
+      <variable>ipa.description</variable>
+    </rule>
+    <rule name="member">
+      <expression>
+if (ipa.member == void || ipa.member == null) return null;
+return module.transformSourceMembers(session, ipa.member);
+      </expression>
     </rule>
 
   </mapping>
 
-  <mapping name="SyncSambaGroup">
+  <mapping name="SambaSyncGroup">
 
-    <rule name="objectClass" action="add">
-      <constant>extensibleObject</constant>
+    <rule name="cn">
+      <variable>ipa.cn</variable>
     </rule>
-
-    <rule name="objectGUID">
-      <variable>samba.objectGUID</variable>
+    <rule name="description">
+      <variable>ipa.description</variable>
     </rule>
-    <rule name="objectSid">
-      <variable>samba.objectSid</variable>
+    <rule name="member">
+      <expression>
+if (ipa.member == void || ipa.member == null) return null;
+return module.transformSourceMembers(session, ipa.member);
+      </expression>
     </rule>
 
   </mapping>
 
-  <mapping name="UnlinkSambaGroup">
+  <mapping name="SambaLinkGroup">
 
-    <rule name="objectClass" action="delete">
-      <constant>extensibleObject</constant>
-    </rule>
+  </mapping>
 
-    <rule name="objectGUID" action="delete"/>
-    <rule name="objectSid" action="delete"/>
+  <mapping name="SambaUnlinkGroup">
 
   </mapping>
 

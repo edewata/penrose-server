@@ -5,54 +5,89 @@
 
 <mappings>
 
-  <mapping name="ImportIPAGroup">
+  <mapping name="IPAImportGroup">
 
-    <rule name="dn">
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="ntUniqueId">
       <expression>
-return "CN="+ipa.cn+",CN=Users,DC=samba,DC=example,DC=com";
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
       </expression>
     </rule>
-
-    <rule name="objectClass">
-      <constant>group</constant>
-    </rule>
-
-    <rule name="cn">
-      <variable>ipa.cn</variable>
-    </rule>
-    <rule name="sAMAccountName">
-      <variable>ipa.cn</variable>
-    </rule>
-    <rule name="description">
-      <variable>ipa.description</variable>
-    </rule>
-    <rule name="member">
-      <expression>
-if (ipa.member == void || ipa.member == null) return null;
-return module.transformSourceMembers(session, ipa.member);
-      </expression>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
     </rule>
 
   </mapping>
 
-  <mapping name="SyncIPAGroup">
+  <mapping name="IPASyncGroup">
 
-    <rule name="cn">
-      <variable>ipa.cn</variable>
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
     </rule>
-    <rule name="description">
-      <variable>ipa.description</variable>
-    </rule>
-    <rule name="member">
+
+    <rule name="ntUniqueId">
       <expression>
-if (ipa.member == void || ipa.member == null) return null;
-return module.transformSourceMembers(session, ipa.member);
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
       </expression>
+    </rule>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
     </rule>
 
   </mapping>
 
-  <mapping name="UnlinkIPAGroup">
+  <mapping name="IPALinkGroup">
+
+    <pre>
+import org.safehaus.penrose.samba.*;
+if (samba.nsUniqueId != void &amp;&amp; samba.nsUniqueId != null) {
+    samba.objectGUID = Samba.toBinaryGUID(samba.nsUniqueId);
+}
+    </pre>
+
+    <rule name="objectClass" action="add">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="ntUniqueId">
+      <expression>
+import org.safehaus.penrose.samba.*;
+return Samba.toStringGUID(samba.objectGUID);
+      </expression>
+    </rule>
+    <rule name="sambaSID">
+      <variable>samba.sambaSID</variable>
+    </rule>
+
+    </mapping>
+
+  <mapping name="IPAUnlinkGroup">
+
+    <rule name="objectClass" action="delete">
+      <constant>extensibleObject</constant>
+    </rule>
+
+    <rule name="ntUniqueId" action="delete"/>
+    <rule name="sambaSID" action="delete"/>
 
   </mapping>
 

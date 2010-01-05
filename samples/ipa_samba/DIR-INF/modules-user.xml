@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE modules PUBLIC
+  "-//Penrose/DTD Modules ${product.specification}//EN"
+  "http://penrose.safehaus.org/dtd/modules.dtd">
+
+<modules>
+
+  <module name="IPASambaUserModule">
+    <module-class>org.safehaus.penrose.ipa.module.IPASambaUserSyncModule</module-class>
+    <parameter>
+      <param-name>source</param-name>
+      <param-value>ipa</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceUsers</param-name>
+      <param-value>ipa_users</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceKeyAttribute</param-name>
+      <param-value>uid</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceLinkAttribute</param-name>
+      <param-value>ntUniqueId</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetImportUserMapping</param-name>
+      <param-value>SambaImportUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceImportUserMapping</param-name>
+      <param-value>IPAImportUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetLinkUserMapping</param-name>
+      <param-value>SambaLinkUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceLinkUserMapping</param-name>
+      <param-value>IPALinkUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetSyncUserMapping</param-name>
+      <param-value>SambaSyncUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetUnlinkUserMapping</param-name>
+      <param-value>SambaUnlinkUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>sourceUnlinkUserMapping</param-name>
+      <param-value>IPAUnlinkUser</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetAlias</param-name>
+      <param-value>samba</param-value>
+    </parameter>
+    <parameter>
+      <param-name>target</param-name>
+      <param-value>sambaFE</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetUsersFE</param-name>
+      <param-value>sambaUsersFE</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetUsersBE</param-name>
+      <param-value>sambaUsersBE</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetKeyAttribute</param-name>
+      <param-value>sAMAccountName</param-value>
+    </parameter>
+    <parameter>
+      <param-name>targetLinkAttribute</param-name>
+      <param-value>nsUniqueId</param-value>
+    </parameter>
+  </module>
+
+</modules>
