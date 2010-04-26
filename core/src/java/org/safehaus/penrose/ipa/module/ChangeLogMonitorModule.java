@@ -1,11 +1,14 @@
 package org.safehaus.penrose.ipa.module;
 
 import org.safehaus.penrose.control.PersistentSearchControl;
+import org.safehaus.penrose.filter.Filter;
+import org.safehaus.penrose.filter.FilterEvaluator;
+import org.safehaus.penrose.filter.FilterTool;
+import org.safehaus.penrose.ipa.ChangeLogMonitor;
 import org.safehaus.penrose.ldap.*;
 import org.safehaus.penrose.ldap.connection.LDAPConnection;
 import org.safehaus.penrose.ldap.source.LDAPSource;
 import org.safehaus.penrose.util.TextUtil;
-import org.safehaus.penrose.changelog.ChangeLog;
 import org.safehaus.penrose.source.SourceManager;
 import org.safehaus.penrose.module.Module;
 import org.safehaus.penrose.module.ModuleManager;
@@ -20,30 +23,21 @@ import java.sql.Timestamp;
 /**
  * @author Endi Sukma Dewata
  */
-public class ChangeLogMonitorModule extends Module implements Runnable {
-
-    LDAPSource source;
-    LDAPSource target;
-
-    LDAPConnection sourceConnection;
-
-    LDAPSource sourceUsers;
-    LDAPSource sourceGroups;
-    LDAPSource sourceHosts;
-
-    LDAPSource targetUsers;
+public class ChangeLogMonitorModule extends Module implements ChangeLogMonitor, Runnable {
 
     LDAPSource changelog;
-
     JDBCSource tracker;
 
     Session session;
+
+    LDAPConnection connection;
     LDAPClient client;
 
-    UserSyncModule userSyncModule;
-    GroupSyncModule groupSyncModule;
+    Map<Filter,SyncModule> modules = new LinkedHashMap<Filter,SyncModule>();
 
-    public ChangeLogMonitorModule() {
+    FilterEvaluator filterEvaluator = new FilterEvaluator();
+
+    public ChangeLogMonitorModule() throws Exception {
     }
 
     public void init() throws Exception {
@@ -58,27 +52,25 @@ public class ChangeLogMonitorModule extends Module implements Runnable {
         String changelogName = getParameter("changelog");
         changelog = (LDAPSource)sourceManager.getSource(changelogName);
 
-        String sourceName = getParameter("source");
-        source = (LDAPSource)sourceManager.getSource(sourceName);
-        sourceConnection = (LDAPConnection)source.getConnection();
-
-        String sourceUsersName = getParameter("sourceUsers");
-        sourceUsers = (LDAPSource)sourceManager.getSource(sourceUsersName);
-
-        String sourceGroupsName = getParameter("sourceGroups");
-        sourceGroups = (LDAPSource)sourceManager.getSource(sourceGroupsName);
-
-        String targetName = getParameter("target");
-        target = (LDAPSource)sourceManager.getSource(targetName);
+        connection = (LDAPConnection)changelog.getConnection();
 
         String trackerName = getParameter("tracker");
         tracker = (JDBCSource)sourceManager.getSource(trackerName);
 
-        String userSyncModuleName = getParameter("userSyncModule");
-        userSyncModule = (UserSyncModule)moduleManager.getModule(userSyncModuleName);
+        String s = getParameter("modules.count");
+        int modulesCount = Integer.parseInt(s);
 
-        String groupSyncModuleName = getParameter("groupSyncModule");
-        groupSyncModule = (GroupSyncModule)moduleManager.getModule(groupSyncModuleName);
+        for (int i=1; i<=modulesCount; i++) {
+            s = getParameter("modules."+i);
+            int p = s.indexOf(":");
+            String f = s.substring(0, p);
+            String moduleName = s.substring(p+1);
+
+            Filter filter = FilterTool.parseFilter(f);
+            SyncModule module = (SyncModule)moduleManager.getModule(moduleName);
+
+            modules.put(filter, module);
+        }
     }
 
     public void destroy() throws Exception {
@@ -131,7 +123,7 @@ public class ChangeLogMonitorModule extends Module implements Runnable {
     public void start() throws Exception {
 
         session = createAdminSession();
-        client = sourceConnection.getClient(session);
+        client = connection.getClient(session);
 
         Thread thread = new Thread(this);
         thread.start();
@@ -140,6 +132,72 @@ public class ChangeLogMonitorModule extends Module implements Runnable {
     public void stop() throws Exception {
         client.close();
         session.close();
+    }
+
+    public Collection<SearchResult> getLogs() throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+            Collection<SearchResult> results = new ArrayList<SearchResult>();
+
+            Long lastTrackedChangeNumber = getLastTrackedChangeNumber(session);
+            log.debug("Last tracked change number: "+lastTrackedChangeNumber);
+
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.setDn(changelog.getBaseDn());
+
+            if (lastTrackedChangeNumber != null) {
+                searchRequest.setFilter(
+                        "(&(changeNumber>="+lastTrackedChangeNumber+")"+
+                        "(!(changeNumber="+lastTrackedChangeNumber+")))"
+                );
+            }
+
+            SearchResponse searchResponse = new SearchResponse();
+
+            changelog.search(session, searchRequest, searchResponse);
+
+            while (searchResponse.hasNext()) {
+                SearchResult result = searchResponse.next();
+                results.add(result);
+            }
+
+            return results;
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public SearchResult getLog(Long changeNumber) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.setDn(changelog.getBaseDn());
+            searchRequest.setFilter("(changeNumber="+changeNumber+")");
+
+            SearchResponse searchResponse = new SearchResponse();
+
+            changelog.search(session, searchRequest, searchResponse);
+
+            if (!searchResponse.hasNext()) return null;
+            return searchResponse.next();
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
     }
 
     public void sync() throws Exception {
@@ -193,7 +251,7 @@ public class ChangeLogMonitorModule extends Module implements Runnable {
             Long lastTrackedChangeNumber = getLastTrackedChangeNumber(session);
             log.debug("Last tracked change number: "+lastTrackedChangeNumber);
 
-            SearchResult rootDse = source.find(session, "");
+            SearchResult rootDse = this.changelog.find(session, "");
             Attribute attribute = rootDse.getAttribute("lastChangeNumber");
             if (attribute == null) return;
 
@@ -212,7 +270,41 @@ public class ChangeLogMonitorModule extends Module implements Runnable {
             if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
         }
     }
-    
+
+    public void addTracker(Long changeNumber) throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            addTracker(session, changeNumber);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
+    public void deleteTrackers() throws Exception {
+        Session session = null;
+
+        try {
+            session = createAdminSession();
+
+            deleteTrackers(session);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw e;
+
+        } finally {
+            if (session != null) try { session.close(); } catch (Exception e) { log.error(e.getMessage(), e); }
+        }
+    }
+
     public Long getLastTrackedChangeNumber(Session session) throws Exception {
 
         QueryResponse response = new QueryResponse() {
@@ -239,42 +331,21 @@ public class ChangeLogMonitorModule extends Module implements Runnable {
         tracker.add(session, new DN(), attributes);
     }
 
+    public void deleteTrackers(Session session) throws Exception {
+        tracker.clear(session);
+    }
+
     public void sync(Session session, SearchResult searchResult) throws Exception {
 
         Attributes attributes = searchResult.getAttributes();
 
-        DN targetDn = new DN((String)attributes.getValue("targetDn"));
-        String changeType = (String)attributes.getValue("changeType");
-        String changes = (String)attributes.getValue("changes");
-        String changeTime = (String)attributes.getValue("changeTime");
         Long changeNumber = Long.parseLong(attributes.getValue("changeNumber").toString());
-
         if (log.isInfoEnabled()) log.info("Processing change number "+changeNumber);
 
-        if (targetDn.endsWith(sourceUsers.getBaseDn())) {
-            if (changeType.equals("add")) {
-                Attributes changeAttributes = ChangeLog.parseAttributes(changes);
-                userSyncModule.addUser(session, targetDn, changeAttributes);
-
-            } else if (changeType.equals("modify")) {
-                Collection<Modification> modifications = ChangeLog.parseModifications(changes);
-                userSyncModule.modifyUser(session, targetDn, modifications);
-
-            } else if (changeType.equals("delete")) {
-                //userSyncModule.deleteUser(session, targetDn);
-            }
-
-        } else if (targetDn.endsWith(sourceGroups.getBaseDn())) {
-            if (changeType.equals("add")) {
-                Attributes changeAttributes = ChangeLog.parseAttributes(changes);
-                groupSyncModule.addGroup(session, targetDn, changeAttributes);
-
-            } else if (changeType.equals("modify")) {
-                Collection<Modification> modifications = ChangeLog.parseModifications(changes);
-                groupSyncModule.modifyGroup(session, targetDn, modifications);
-
-            } else if (changeType.equals("delete")) {
-                //groupSyncModule.deleteGroup(session, targetDn);
+        for (Filter filter : modules.keySet()) {
+            if (filterEvaluator.eval(attributes, filter)) {
+                SyncModule module = modules.get(filter);
+                module.sync(session, searchResult);
             }
         }
 

@@ -1,14 +1,12 @@
 package org.safehaus.penrose.ipa.module;
 
+import org.safehaus.penrose.changelog.ChangeLog;
 import org.safehaus.penrose.ldap.*;
 import org.safehaus.penrose.ldap.source.LDAPSource;
 import org.safehaus.penrose.util.TextUtil;
 import org.safehaus.penrose.source.SourceManager;
-import org.safehaus.penrose.module.Module;
 import org.safehaus.penrose.module.ModuleManager;
 import org.safehaus.penrose.session.Session;
-import org.safehaus.penrose.mapping.Mapping;
-import org.safehaus.penrose.mapping.MappingManager;
 import org.safehaus.penrose.interpreter.Interpreter;
 import org.safehaus.penrose.filter.Filter;
 import org.safehaus.penrose.filter.SimpleFilter;
@@ -19,30 +17,12 @@ import java.util.*;
 /**
  * @author Endi Sukma Dewata
  */
-public class GroupSyncModule extends Module {
+public class GroupSyncModule extends SyncModule {
 
-    protected String sourceAlias;
-    protected LDAPSource source;
     protected LDAPSource sourceUsers;
     protected LDAPSource sourceGroups;
 
-    protected String targetAlias;
-    protected LDAPSource target;
     protected LDAPSource targetGroups;
-
-    protected String sourceKeyAttribute;
-    protected String sourceLinkAttribute;
-    protected String targetKeyAttribute;
-    protected String targetLinkAttribute;
-
-    protected Mapping sourceImportGroupMapping;
-    protected Mapping targetImportGroupMapping;
-    protected Mapping sourceLinkGroupMapping;
-    protected Mapping targetLinkGroupMapping;
-    protected Mapping sourceSyncGroupMapping;
-    protected Mapping targetSyncGroupMapping;
-    protected Mapping sourceUnlinkGroupMapping;
-    protected Mapping targetUnlinkGroupMapping;
 
     protected Map<String,DN> sourceDns = new LinkedHashMap<String,DN>();
     protected Map<String,String> sourceDnMapping = new LinkedHashMap<String,String>();
@@ -58,21 +38,14 @@ public class GroupSyncModule extends Module {
 
     public void init() throws Exception {
 
+        super.init();
+
         log.debug(TextUtil.displaySeparator(60));
-        log.debug(TextUtil.displayLine("Initializing IPA Group Module", 60));
+        log.debug(TextUtil.displayLine("Initializing Group Sync Module", 60));
         log.debug(TextUtil.displaySeparator(60));
 
         SourceManager sourceManager = partition.getSourceManager();
-        MappingManager mappingManager = partition.getMappingManager();
         ModuleManager moduleManager = partition.getModuleManager();
-
-        String sourceName = getParameter("source");
-        source = (LDAPSource)sourceManager.getSource(sourceName);
-
-        sourceAlias = getParameter("sourceAlias");
-        if (sourceAlias == null) {
-            sourceAlias = source.getName();
-        }
 
         String sourceUsersName = getParameter("sourceUsers");
         sourceUsers = (LDAPSource)sourceManager.getSource(sourceUsersName);
@@ -80,46 +53,8 @@ public class GroupSyncModule extends Module {
         String sourceGroupsName = getParameter("sourceGroups");
         sourceGroups = (LDAPSource)sourceManager.getSource(sourceGroupsName);
 
-        sourceKeyAttribute = getParameter("sourceKeyAttribute");
-        sourceLinkAttribute = getParameter("sourceLinkAttribute");
-
-        String sourceImportGroupMappingName = getParameter("sourceImportGroupMapping");
-        sourceImportGroupMapping = mappingManager.getMapping(sourceImportGroupMappingName);
-
-        String targetImportGroupMappingName = getParameter("targetImportGroupMapping");
-        targetImportGroupMapping = mappingManager.getMapping(targetImportGroupMappingName);
-
-        String sourceLinkGroupMappingName = getParameter("sourceLinkGroupMapping");
-        sourceLinkGroupMapping = mappingManager.getMapping(sourceLinkGroupMappingName);
-
-        String targetLinkGroupMappingName = getParameter("targetLinkGroupMapping");
-        targetLinkGroupMapping = mappingManager.getMapping(targetLinkGroupMappingName);
-
-        String sourceSyncGroupMappingName = getParameter("sourceSyncGroupMapping");
-        sourceSyncGroupMapping = mappingManager.getMapping(sourceSyncGroupMappingName);
-
-        String targetSyncGroupMappingName = getParameter("targetSyncGroupMapping");
-        targetSyncGroupMapping = mappingManager.getMapping(targetSyncGroupMappingName);
-
-        String sourceUnlinkGroupMappingName = getParameter("sourceUnlinkGroupMapping");
-        sourceUnlinkGroupMapping = mappingManager.getMapping(sourceUnlinkGroupMappingName);
-
-        String targetUnlinkGroupMappingName = getParameter("targetUnlinkGroupMapping");
-        targetUnlinkGroupMapping = mappingManager.getMapping(targetUnlinkGroupMappingName);
-
-        String targetName = getParameter("target");
-        target = (LDAPSource)sourceManager.getSource(targetName);
-
-        targetAlias = getParameter("targetAlias");
-        if (targetAlias == null) {
-            targetAlias = target.getName();
-        }
-
         String targetGroupsName = getParameter("targetGroups");
         targetGroups = (LDAPSource)sourceManager.getSource(targetGroupsName);
-
-        targetKeyAttribute = getParameter("targetKeyAttribute");
-        targetLinkAttribute = getParameter("targetLinkAttribute");
 
 /*
         DN sourceAdminDn = new DN("cn=admins,cn=groups,cn=accounts").append(source.getBaseDn());
@@ -142,11 +77,11 @@ public class GroupSyncModule extends Module {
     // Public Methods
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public Map<String,SearchResult> getGroups() throws Exception {
+    public Map<String,DN> getDns() throws Exception {
         final Session session = createAdminSession();
 
         try {
-            final Map<String,SearchResult> map = new TreeMap<String,SearchResult>();
+            final Map<String,DN> map = new TreeMap<String,DN>();
 
             SearchRequest sourceRequest = new SearchRequest();
 
@@ -158,7 +93,7 @@ public class GroupSyncModule extends Module {
                     Object value = attribute.getValue();
                     if (value == null) return;
 
-                    map.put(value.toString(), result);
+                    map.put(value.toString(), result.getDn());
                 }
             };
 
@@ -175,7 +110,7 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public SearchResult getGroup(String key) throws Exception {
+    public SearchResult getEntry(String key) throws Exception {
         final Session session = createAdminSession();
 
         try {
@@ -190,7 +125,7 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public void syncGroups() throws Exception {
+    public void syncEntries() throws Exception {
         final Session session = createAdminSession();
 
         try {
@@ -198,7 +133,7 @@ public class GroupSyncModule extends Module {
 
             SearchResponse sourceResponse = new SearchResponse() {
                 public void add(SearchResult sourceEntry) throws Exception {
-                    syncGroup(session, sourceEntry);
+                    syncEntry(session, sourceEntry);
                 }
             };
 
@@ -213,14 +148,14 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public void syncGroup(String key) throws Exception {
+    public void syncEntry(String key) throws Exception {
         Session session = null;
 
         try {
             session = createAdminSession();
 
             SearchResult sourceEntry = searchSourceGroup(session, key);
-            syncGroup(session, sourceEntry);
+            syncEntry(session, sourceEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -231,7 +166,7 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public void linkGroup(String key) throws Exception {
+    public void linkEntry(String key) throws Exception {
         Session session = null;
 
         try {
@@ -243,7 +178,7 @@ public class GroupSyncModule extends Module {
             SearchResult targetEntry = searchTargetGroup(session, sourceEntry);
             if (targetEntry == null) return;
 
-            linkGroup(session, sourceEntry, targetEntry);
+            linkEntry(session, sourceEntry, targetEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -254,14 +189,14 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public void unlinkGroup(String key) throws Exception {
+    public void unlinkEntry(String key) throws Exception {
         Session session = null;
 
         try {
             session = createAdminSession();
 
             SearchResult sourceEntry = searchSourceGroup(session, key);
-            unlinkGroup(session, sourceEntry);
+            unlinkEntry(session, sourceEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -272,14 +207,14 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public void deleteGroup(String key) throws Exception {
+    public void deleteEntry(String key) throws Exception {
         Session session = null;
 
         try {
             session = createAdminSession();
 
             SearchResult sourceEntry = searchSourceGroup(session, key);
-            deleteGroup(session, sourceEntry);
+            deleteEntry(session, sourceEntry);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -294,7 +229,7 @@ public class GroupSyncModule extends Module {
     // Internal Methods
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public SearchResult syncGroup(Session session, SearchResult sourceEntry) throws Exception {
+    public SearchResult syncEntry(Session session, SearchResult sourceEntry) throws Exception {
 
         DN sourceDn = sourceEntry.getDn();
         if (log.isInfoEnabled()) log.info("Synchronizing "+sourceDn);
@@ -318,30 +253,37 @@ public class GroupSyncModule extends Module {
         return targetEntry;
     }
 
-    public void unlinkGroup(Session session, SearchResult sourceEntry) throws Exception {
+    public void unlinkEntry(Session session, SearchResult sourceEntry) throws Exception {
 
         DN sourceDn = sourceEntry.getDn();
         if (log.isInfoEnabled()) log.info("Unlinking "+sourceDn);
 
-        SearchResult targetEntry = getLinkedGroup(session, sourceEntry);
+        SearchResult targetEntry = getTargetGroup(session, sourceEntry);
         if (targetEntry == null) return;
 
         unlinkGroup(session, sourceEntry, targetEntry);
     }
 
-    public void deleteGroup(Session session, SearchResult sourceEntry) throws Exception {
+    public void deleteEntry(Session session, SearchResult sourceEntry) throws Exception {
 
-        DN sourceDn = sourceEntry.getDn();
-        if (log.isInfoEnabled()) log.info("Deleting "+sourceDn);
-
-        SearchResult targetEntry = getLinkedGroup(session, sourceEntry);
-        if (targetEntry != null) {
-            DN targetDn = targetEntry.getDn();
-            if (log.isInfoEnabled()) log.info("Deleting "+targetDn);
-            target.delete(session, targetDn);
+        Object link = getSourceLink(sourceEntry);
+        if (link != null) {
+            deleteTargetGroup(session, link);
         }
 
+        DN sourceDn = sourceEntry.getDn();
+        if (log.isInfoEnabled()) log.info("Deleting source group "+sourceDn);
         source.delete(session, sourceDn);
+    }
+
+    public void deleteTargetGroup(Session session, Object link) throws Exception {
+
+        SearchResult targetEntry = getTargetGroup(session, link);
+        if (targetEntry == null) return;
+
+        DN targetDn = targetEntry.getDn();
+        if (log.isInfoEnabled()) log.info("Deleting target group "+targetDn);
+        targetFE.delete(session, targetDn);
     }
 
     public SearchResult addGroup(Session session, SearchResult sourceEntry) throws Exception {
@@ -349,7 +291,7 @@ public class GroupSyncModule extends Module {
         Attributes sourceAttributes = sourceEntry.getAttributes();
         return addGroup(session, sourceDn, sourceAttributes);
     }
-    
+
     public SearchResult addGroup(Session session, DN sourceDn, Attributes sourceAttributes) throws Exception {
 
         String normalizedSourceDn = sourceDn.getNormalizedDn();
@@ -370,7 +312,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        targetImportGroupMapping.map(interpreter, targetAttributes);
+        targetImportMapping.map(interpreter, targetAttributes);
 
         String normalizedTargetDn = sourceDnMapping.get(normalizedSourceDn);
         DN targetDn = targetDns.get(normalizedTargetDn);
@@ -395,7 +337,7 @@ public class GroupSyncModule extends Module {
             AddResponse addResponse = new AddResponse();
 
             try {
-                target.add(session, addRequest, addResponse);
+                targetFE.add(session, addRequest, addResponse);
                 done = true;
 
             } catch (LDAPException e) {
@@ -420,10 +362,10 @@ public class GroupSyncModule extends Module {
             }
         }
 
-        SearchResult targetResult = target.find(session, targetDn);
+        SearchResult targetResult = targetFE.find(session, targetDn);
         targetAttributes = targetResult.getAttributes();
 
-        if (sourceImportGroupMapping == null) return targetResult;
+        if (sourceImportMapping == null) return targetResult;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -433,7 +375,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        sourceImportGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceImportMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -467,15 +409,15 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        targetSyncGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        targetSyncMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
 
-            target.modify(session, targetModifyRequest, targetModifyResponse);
+            targetFE.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (sourceSyncGroupMapping == null) return;
+        if (sourceSyncMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -485,7 +427,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        sourceSyncGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceSyncMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -494,7 +436,7 @@ public class GroupSyncModule extends Module {
         }
     }
 
-    public void linkGroup(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
+    public void linkEntry(Session session, SearchResult sourceEntry, SearchResult targetEntry) throws Exception {
 
         DN sourceDn = sourceEntry.getDn();
         Attributes sourceAttributes = sourceEntry.getAttributes();
@@ -517,15 +459,15 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(sourceAlias, sourceAttributes);
 
-        targetLinkGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+        targetLinkMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
         if (!targetModifyRequest.isEmpty()) {
             ModifyResponse targetModifyResponse = new ModifyResponse();
 
-            target.modify(session, targetModifyRequest, targetModifyResponse);
+            targetFE.modify(session, targetModifyRequest, targetModifyResponse);
         }
 
-        if (sourceLinkGroupMapping == null) return;
+        if (sourceLinkMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -535,7 +477,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         interpreter.set(targetAlias, targetAttributes);
 
-        sourceLinkGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceLinkMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -571,16 +513,16 @@ public class GroupSyncModule extends Module {
             interpreter.set("module", this);
             interpreter.set(sourceAlias, sourceAttributes);
 
-            targetUnlinkGroupMapping.map(interpreter, targetAttributes, targetModifyRequest);
+            targetUnlinkMapping.map(interpreter, targetAttributes, targetModifyRequest);
 
             if (!targetModifyRequest.isEmpty()) {
                 ModifyResponse targetModifyResponse = new ModifyResponse();
 
-                target.modify(session, targetModifyRequest, targetModifyResponse);
+                targetFE.modify(session, targetModifyRequest, targetModifyResponse);
             }
         }
 
-        if (sourceUnlinkGroupMapping == null) return;
+        if (sourceUnlinkMapping == null) return;
 
         ModifyRequest sourceModifyRequest = new ModifyRequest();
         sourceModifyRequest.setDn(sourceDn);
@@ -590,7 +532,7 @@ public class GroupSyncModule extends Module {
         interpreter.set("module", this);
         if (targetEntry != null) interpreter.set(targetAlias, targetAttributes);
 
-        sourceUnlinkGroupMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
+        sourceUnlinkMapping.map(interpreter, sourceAttributes, sourceModifyRequest);
 
         if (!sourceModifyRequest.isEmpty()) {
             ModifyResponse sourceModifyResponse = new ModifyResponse();
@@ -628,7 +570,7 @@ public class GroupSyncModule extends Module {
         }
 
         SearchResult sourceEntry = source.find(session, sourceDn);
-        SearchResult targetEntry = getLinkedGroup(session, sourceEntry);
+        SearchResult targetEntry = getTargetGroup(session, sourceEntry);
         if (targetEntry == null) return;
 
         ModifyRequest modifyRequest = new ModifyRequest();
@@ -649,7 +591,7 @@ public class GroupSyncModule extends Module {
 
         ModifyResponse modifyResponse = new ModifyResponse();
 
-        target.modify(session, modifyRequest, modifyResponse);
+        targetFE.modify(session, modifyRequest, modifyResponse);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -675,15 +617,49 @@ public class GroupSyncModule extends Module {
         return sourceResponse.next();
     }
 
-    public SearchResult getLinkedGroup(Session session, SearchResult sourceEntry) throws Exception {
-
+    public Object getSourceLink(SearchResult sourceEntry) {
         Attribute linkAttribute = sourceEntry.getAttribute(sourceLinkAttribute);
         if (linkAttribute == null) return null;
 
-        return getLinkedGroup(session, linkAttribute.getValue());
+        return linkAttribute.getValue();
     }
 
-    public SearchResult getLinkedGroup(Session session, Object link) throws Exception {
+    public SearchResult getSourceGroup(Session session, Object link) throws Exception {
+
+        Filter filter = new SimpleFilter(sourceLinkAttribute, "=", link);
+        if (log.isInfoEnabled()) log.info("Searching source for "+filter);
+
+        SearchRequest sourceRequest = new SearchRequest();
+        sourceRequest.setFilter(filter);
+
+        SearchResponse sourceResponse = new SearchResponse();
+
+        sourceGroups.search(session, sourceRequest, sourceResponse);
+
+        if (!sourceResponse.hasNext()) return null;
+
+        SearchResult sourceEntry = sourceResponse.next();
+        if (log.isInfoEnabled()) log.info("Found source: "+sourceEntry.getDn());
+
+        return sourceEntry;
+    }
+
+    public Object getTargetLink(SearchResult targetEntry) {
+        Attribute linkAttribute = targetEntry.getAttribute(targetLinkAttribute);
+        if (linkAttribute == null) return null;
+
+        return linkAttribute.getValue();
+    }
+
+    public SearchResult getTargetGroup(Session session, SearchResult sourceEntry) throws Exception {
+
+        Object link = getSourceLink(sourceEntry);
+        if (link == null) return null;
+
+        return getTargetGroup(session, link);
+    }
+
+    public SearchResult getTargetGroup(Session session, Object link) throws Exception {
 
         Filter filter = new SimpleFilter(targetLinkAttribute, "=", link);
         if (log.isInfoEnabled()) log.info("Searching target for "+filter);
@@ -705,7 +681,7 @@ public class GroupSyncModule extends Module {
 
     public SearchResult searchTargetGroup(Session session, SearchResult sourceEntry) throws Exception {
 
-        SearchResult targetEntry = getLinkedGroup(session, sourceEntry);
+        SearchResult targetEntry = getTargetGroup(session, sourceEntry);
 
         if (targetEntry == null) {
 
@@ -804,16 +780,16 @@ public class GroupSyncModule extends Module {
             return null;
         }
 
-        SearchResult targetMemberEntry = userSyncModule.getLinkedUser(session, sourceMemberEntry);
+        SearchResult targetMemberEntry = userSyncModule.getTargetUser(session, sourceMemberEntry);
         if (targetMemberEntry == null) {
             if (log.isDebugEnabled()) log.debug("==> Target member not found.");
 
             Attribute objectClass = sourceMemberEntry.getAttribute("objectClass");
             if (objectClass.containsValue("person")) {
-                targetMemberEntry = userSyncModule.syncUser(session, sourceMemberEntry);
+                targetMemberEntry = userSyncModule.syncEntry(session, sourceMemberEntry);
 
             } else if (objectClass.containsValue("groupOfNames")) {
-                targetMemberEntry = syncGroup(session, sourceMemberEntry);
+                targetMemberEntry = syncEntry(session, sourceMemberEntry);
 
             } else {
                 return null;
@@ -826,5 +802,32 @@ public class GroupSyncModule extends Module {
         if (log.isInfoEnabled()) log.info("==> Target member: "+targetMemberDn);
 
         return targetMemberDn;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Change Log
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void sync(Session session, SearchResult searchResult) throws Exception {
+
+        Attributes attributes = searchResult.getAttributes();
+
+        DN targetDn = new DN((String)attributes.getValue("targetDn"));
+        String changeType = (String)attributes.getValue("changeType");
+        String changes = (String)attributes.getValue("changes");
+        Object link = attributes.getValue("targetUniqueId");
+
+        if (changeType.equals("add")) {
+            Attributes changeAttributes = ChangeLog.parseAttributes(changes);
+            changeAttributes.addValue("nsUniqueId", link);
+            addGroup(session, targetDn, changeAttributes);
+
+        } else if (changeType.equals("modify")) {
+            Collection<Modification> modifications = ChangeLog.parseModifications(changes);
+            modifyGroup(session, targetDn, modifications);
+
+        } else if (changeType.equals("delete")) {
+            deleteTargetGroup(session, link);
+        }
     }
 }

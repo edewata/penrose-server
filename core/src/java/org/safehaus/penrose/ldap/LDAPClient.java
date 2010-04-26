@@ -17,6 +17,8 @@
  */
 package org.safehaus.penrose.ldap;
 
+import com.novell.sasl.client.ClientFactory;
+import com.novell.security.sasl.SaslClient;
 import org.ietf.ldap.*;
 import org.safehaus.penrose.control.Control;
 import org.safehaus.penrose.control.PagedResultsControl;

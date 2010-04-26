@@ -4,7 +4,6 @@ import org.safehaus.penrose.session.Session;
 import org.safehaus.penrose.ldap.DN;
 import org.safehaus.penrose.ldap.Modification;
 import org.safehaus.penrose.ldap.Attribute;
-import org.safehaus.penrose.ldap.LDAP;
 
 import java.util.Collection;
 
@@ -13,7 +12,7 @@ import java.util.Collection;
  */
 public class IPASambaUserSyncModule extends UserSyncModule {
 
-    public void modifyUser(Session session, DN sourceDn, Collection<Modification> modifications) throws Exception {
+    public void modifyEntry(Session session, DN sourceDn, Collection<Modification> modifications) throws Exception {
 
         DN modifiersName = null;
 
@@ -33,6 +32,6 @@ public class IPASambaUserSyncModule extends UserSyncModule {
             return;
         }
 
-        super.modifyUser(session, sourceDn, modifications);
+        super.modifyEntry(session, sourceDn, modifications);
     }
 }

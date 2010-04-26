@@ -5,11 +5,11 @@
 
 <mappings>
 
-  <mapping name="sambaImportUser">
+  <mapping name="sambaImportHost">
 
     <rule name="dn">
       <expression>
-return "CN="+ipa.cn+",CN=Users,DC=samba,DC=example,DC=com";
+return "CN="+ipa.serverHostName+",CN=Computers,DC=samba,DC=example,DC=com";
       </expression>
     </rule>
 
@@ -22,18 +22,27 @@ return "CN="+ipa.cn+",CN=Users,DC=samba,DC=example,DC=com";
     <rule name="objectClass" action="add">
       <constant>organizationalPerson</constant>
     </rule>
+    <rule name="objectClass">
+      <constant>computer</constant>
+    </rule>
 
     <rule name="cn">
-      <variable>ipa.cn</variable>
-    </rule>
-    <rule name="sn">
-      <variable>ipa.sn</variable>
+      <variable>ipa.serverHostName</variable>
     </rule>
     <rule name="sAMAccountName">
-      <variable>ipa.uid</variable>
+      <expression>ipa.serverHostName+"$"</expression>
     </rule>
-    <rule name="homeDirectory">
-      <variable>ipa.homeDirectory</variable>
+    <rule name="displayName">
+      <expression>ipa.serverHostName+"$"</expression>
+    </rule>
+    <rule name="dNSHostName">
+      <variable>ipa.fqdn</variable>
+    </rule>
+    <rule name="servicePrincipalName">
+      <expression>"HOST/"+ipa.fqdn</expression>
+    </rule>
+    <rule name="servicePrincipalName" action="add">
+      <expression>"HOST/"+ipa.serverHostName</expression>
     </rule>
 
     <rule name="accountExpires">
@@ -56,12 +65,12 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
     </rule>
 
     <rule name="userAccountControl">
-      <constant>640</constant>
+      <constant>4096</constant>
     </rule>
 
   </mapping>
 
-  <mapping name="sambaLinkUser">
+  <mapping name="sambaLinkHost">
 
     <rule name="sn">
       <variable>ipa.sn</variable>
@@ -91,7 +100,7 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
 
   </mapping>
 
-  <mapping name="sambaSyncUser">
+  <mapping name="sambaSyncHost">
 
     <rule name="sn">
       <variable>ipa.sn</variable>
@@ -143,7 +152,7 @@ return ActiveDirectory.toTimestamp(IPA.toDate(ipa.krbLastPwdChange));
 
   </mapping>
 
-  <mapping name="sambaUnlinkUser">
+  <mapping name="sambaUnlinkHost">
 
   </mapping>
 

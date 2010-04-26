@@ -5,7 +5,7 @@
 
 <mappings>
 
-  <mapping name="IPALoadLinkAttribute">
+  <mapping name="ipaLoadLinkAttribute">
     <rule name="guid">
       <expression>
 import org.safehaus.penrose.ad.*;
@@ -15,7 +15,7 @@ return Samba.toBinaryGUID(ipa.ntUniqueId);
     </rule>
   </mapping>
 
-  <mapping name="IPAImportUser">
+  <mapping name="ipaImportUser">
 
     <pre>
 import org.safehaus.penrose.samba.*;
@@ -157,7 +157,7 @@ return Samba.getClearTextPassword(samba.supplementalCredentials);
 
   </mapping>
 
-  <mapping name="IPALinkUser">
+  <mapping name="ipaLinkUser">
 
     <pre>
 import org.safehaus.penrose.samba.*;
@@ -227,7 +227,7 @@ return Samba.toStringGUID(samba.objectGUID);
 
   </mapping>
 
-  <mapping name="IPASyncUser">
+  <mapping name="ipaSyncUser">
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
@@ -298,7 +298,7 @@ return IPA.toTimestamp(ActiveDirectory.toDate(samba.pwdLastSet));
 
   </mapping>
 
-  <mapping name="IPAUnlinkUser">
+  <mapping name="ipaUnlinkUser">
 
     <rule name="objectClass" action="delete">
       <constant>extensibleObject</constant>

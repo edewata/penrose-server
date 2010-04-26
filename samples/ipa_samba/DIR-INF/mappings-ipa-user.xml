@@ -5,7 +5,7 @@
 
 <mappings>
 
-  <mapping name="IPAImportUser">
+  <mapping name="ipaImportUser">
 
     <pre>
 import org.safehaus.penrose.samba.*;
@@ -52,7 +52,7 @@ return Samba.toStringGUID(samba.objectGUID);
 
   </mapping>
 
-  <mapping name="IPALinkUser">
+  <mapping name="ipaLinkUser">
 
     <rule name="objectClass" action="add">
       <constant>extensibleObject</constant>
@@ -95,7 +95,7 @@ return ActiveDirectory.toStringSID(samba.objectSid);
 
   </mapping>
 
-  <mapping name="IPAUnlinkUser">
+  <mapping name="ipaUnlinkUser">
 
     <rule name="objectClass" action="delete">
       <constant>extensibleObject</constant>

@@ -5,7 +5,7 @@
 
 <modules>
 
-  <module name="IPASambaGroupModule">
+  <module name="GroupModule">
     <module-class>org.safehaus.penrose.ipa.module.GroupSyncModule</module-class>
     <parameter>
       <param-name>source</param-name>
@@ -13,11 +13,11 @@
     </parameter>
     <parameter>
       <param-name>sourceUsers</param-name>
-      <param-value>ipa_users</param-value>
+      <param-value>ipaUsers</param-value>
     </parameter>
     <parameter>
       <param-name>sourceGroups</param-name>
-      <param-value>ipa_groups</param-value>
+      <param-value>ipaGroups</param-value>
     </parameter>
     <parameter>
       <param-name>sourceKeyAttribute</param-name>
@@ -28,36 +28,36 @@
       <param-value>ntUniqueId</param-value>
     </parameter>
     <parameter>
-      <param-name>targetImportGroupMapping</param-name>
-      <param-value>SambaImportGroup</param-value>
+      <param-name>targetImportMapping</param-name>
+      <param-value>sambaImportGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceImportGroupMapping</param-name>
-      <param-value>IPAImportGroup</param-value>
+      <param-name>sourceImportMapping</param-name>
+      <param-value>ipaImportGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>targetLinkGroupMapping</param-name>
-      <param-value>SambaLinkGroup</param-value>
+      <param-name>targetLinkMapping</param-name>
+      <param-value>sambaLinkGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceLinkGroupMapping</param-name>
-      <param-value>IPALinkGroup</param-value>
+      <param-name>sourceLinkMapping</param-name>
+      <param-value>ipaLinkGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>targetSyncGroupMapping</param-name>
-      <param-value>SambaSyncGroup</param-value>
+      <param-name>targetSyncMapping</param-name>
+      <param-value>sambaSyncGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceSyncGroupMapping</param-name>
-      <param-value>IPASyncGroup</param-value>
+      <param-name>sourceSyncMapping</param-name>
+      <param-value>ipaSyncGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>targetUnlinkGroupMapping</param-name>
-      <param-value>SambaUnlinkGroup</param-value>
+      <param-name>targetUnlinkMapping</param-name>
+      <param-value>sambaUnlinkGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceUnlinkGroupMapping</param-name>
-      <param-value>IPAUnlinkGroup</param-value>
+      <param-name>sourceUnlinkMapping</param-name>
+      <param-value>ipaUnlinkGroup</param-value>
     </parameter>
     <parameter>
       <param-name>targetAlias</param-name>
@@ -81,7 +81,7 @@
     </parameter>
     <parameter>
       <param-name>userSyncModule</param-name>
-      <param-value>IPASambaUserModule</param-value>
+      <param-value>UserModule</param-value>
     </parameter>
   </module>
 

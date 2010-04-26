@@ -101,4 +101,4 @@ exec "$JAVACMD" $VD_SERVER_OPTS \
 -Dpenrose.home="$VD_SERVER_HOME" \
 -Dpartition.home="$partition_home" \
 -Dpartition.name="$partition_name" \
-org.safehaus.penrose.samba.SambaSyncClient "$@"
+org.safehaus.penrose.ipa.SyncClient "$@"

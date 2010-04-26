@@ -5,7 +5,7 @@
 
 <mappings>
 
-  <mapping name="SambaLoadLinkAttribute">
+  <mapping name="sambaLoadLinkAttribute">
     <rule name="guid">
       <expression>
 import org.safehaus.penrose.samba.*;
@@ -15,7 +15,7 @@ return Samba.toBinaryGUID(samba.nsUniqueId);
     </rule>
   </mapping>
 
-  <mapping name="SambaLinkUser">
+  <mapping name="sambaLinkUser">
 
     <rule name="cn">
       <variable>ipa.cn</variable>

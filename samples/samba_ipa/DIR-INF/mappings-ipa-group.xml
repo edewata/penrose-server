@@ -5,7 +5,7 @@
 
 <mappings>
 
-  <mapping name="IPAImportGroup">
+  <mapping name="ipaImportGroup">
 
     <pre>
 import org.safehaus.penrose.samba.*;
@@ -61,7 +61,7 @@ return Samba.toStringGUID(samba.objectGUID);
 
   </mapping>
 
-  <mapping name="IPASyncGroup">
+  <mapping name="ipaSyncGroup">
 
     <pre>
 import org.safehaus.penrose.samba.*;
@@ -96,7 +96,7 @@ return Samba.toStringGUID(samba.objectGUID);
 
   </mapping>
 
-  <mapping name="IPALinkGroup">
+  <mapping name="ipaLinkGroup">
 
     <pre>
 import org.safehaus.penrose.samba.*;
@@ -120,7 +120,7 @@ return Samba.toStringGUID(samba.objectGUID);
 
   </mapping>
 
-  <mapping name="IPAUnlinkGroup">
+  <mapping name="ipaUnlinkGroup">
 
     <rule name="objectClass" action="delete">
       <constant>extensibleObject</constant>

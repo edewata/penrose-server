@@ -5,40 +5,8 @@
 
 <modules>
 
-  <module name="SambaChangeLogMonitorModule">
+  <module name="ChangeLogMonitorModule">
     <module-class>org.safehaus.penrose.ipa.module.ChangeLogMonitorModule</module-class>
-    <parameter>
-      <param-name>source</param-name>
-      <param-value>samba</param-value>
-    </parameter>
-    <parameter>
-      <param-name>sourceUsers</param-name>
-      <param-value>sambaUsers</param-value>
-    </parameter>
-    <parameter>
-      <param-name>sourceGroups</param-name>
-      <param-value>sambaGroups</param-value>
-    </parameter>
-    <parameter>
-      <param-name>sourceHosts</param-name>
-      <param-value>sambaHosts</param-value>
-    </parameter>
-    <parameter>
-      <param-name>target</param-name>
-      <param-value>ipa</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetUsers</param-name>
-      <param-value>ipaUsers</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetGroups</param-name>
-      <param-value>ipaGroups</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetHosts</param-name>
-      <param-value>ipaHosts</param-value>
-    </parameter>
     <parameter>
       <param-name>changelog</param-name>
       <param-value>samba_changelog</param-value>
@@ -48,12 +16,16 @@
       <param-value>samba_tracker</param-value>
     </parameter>
     <parameter>
-      <param-name>userSyncModule</param-name>
-      <param-value>SambaIPAUserModule</param-value>
+      <param-name>modules.count</param-name>
+      <param-value>2</param-value>
     </parameter>
     <parameter>
-      <param-name>groupSyncModule</param-name>
-      <param-value>SambaIPAGroupModule</param-value>
+      <param-name>modules.1</param-name>
+      <param-value>(targetObjectClass=user):UserModule</param-value>
+    </parameter>
+    <parameter>
+      <param-name>modules.2</param-name>
+      <param-value>(targetObjectClass=group):GroupModule</param-value>
     </parameter>
   </module>
 

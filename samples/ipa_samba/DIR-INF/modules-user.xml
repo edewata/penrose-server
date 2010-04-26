@@ -5,7 +5,7 @@
 
 <modules>
 
-  <module name="IPASambaUserModule">
+  <module name="UserModule">
     <module-class>org.safehaus.penrose.ipa.module.IPASambaUserSyncModule</module-class>
     <parameter>
       <param-name>source</param-name>
@@ -13,7 +13,7 @@
     </parameter>
     <parameter>
       <param-name>sourceUsers</param-name>
-      <param-value>ipa_users</param-value>
+      <param-value>ipaUsers</param-value>
     </parameter>
     <parameter>
       <param-name>sourceKeyAttribute</param-name>
@@ -24,32 +24,32 @@
       <param-value>ntUniqueId</param-value>
     </parameter>
     <parameter>
-      <param-name>targetImportUserMapping</param-name>
-      <param-value>SambaImportUser</param-value>
+      <param-name>targetImportMapping</param-name>
+      <param-value>sambaImportUser</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceImportUserMapping</param-name>
-      <param-value>IPAImportUser</param-value>
+      <param-name>sourceImportMapping</param-name>
+      <param-value>ipaImportUser</param-value>
     </parameter>
     <parameter>
-      <param-name>targetLinkUserMapping</param-name>
-      <param-value>SambaLinkUser</param-value>
+      <param-name>targetLinkMapping</param-name>
+      <param-value>sambaLinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceLinkUserMapping</param-name>
-      <param-value>IPALinkUser</param-value>
+      <param-name>sourceLinkMapping</param-name>
+      <param-value>ipaLinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>targetSyncUserMapping</param-name>
-      <param-value>SambaSyncUser</param-value>
+      <param-name>targetSyncMapping</param-name>
+      <param-value>sambaSyncUser</param-value>
     </parameter>
     <parameter>
-      <param-name>targetUnlinkUserMapping</param-name>
-      <param-value>SambaUnlinkUser</param-value>
+      <param-name>targetUnlinkMapping</param-name>
+      <param-value>sambaUnlinkUser</param-value>
     </parameter>
     <parameter>
-      <param-name>sourceUnlinkUserMapping</param-name>
-      <param-value>IPAUnlinkUser</param-value>
+      <param-name>sourceUnlinkMapping</param-name>
+      <param-value>ipaUnlinkUser</param-value>
     </parameter>
     <parameter>
       <param-name>targetAlias</param-name>

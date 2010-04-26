@@ -37,14 +37,17 @@ public class SambaIPAUserSyncModule extends UserSyncModule {
         return sourceEntry;
     }
 
-    public void deleteUser(Session session, SearchResult sourceEntry) throws Exception {
+    public void deleteTargetUser(Session session, DN targetDn) throws Exception {
+
+        DN groupDn = new DN("cn=ipausers,cn=groups,cn=accounts").append(targetFE.getBaseDn());
+        if (log.isInfoEnabled()) log.info("Modifying target group "+groupDn);
 
         ModifyRequest request = new ModifyRequest();
-        request.setDn(new DN("cn=ipausers,cn=groups,cn=accounts").append(targetFE.getBaseDn()));
+        request.setDn(groupDn);
 
         request.addModification(new Modification(
                 Modification.DELETE,
-                new Attribute("member", sourceEntry.getDn().toString())
+                new Attribute("member", targetDn)
         ));
 
         ModifyResponse response = new ModifyResponse();
@@ -59,6 +62,6 @@ public class SambaIPAUserSyncModule extends UserSyncModule {
             }
         }
 
-        super.deleteUser(session, sourceEntry);
+        super.deleteTargetUser(session, targetDn);
     }
 }

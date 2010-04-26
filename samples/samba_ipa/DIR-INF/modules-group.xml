@@ -5,7 +5,7 @@
 
 <modules>
 
-  <module name="SambaIPAGroupModule">
+  <module name="GroupModule">
     <module-class>org.safehaus.penrose.ipa.module.GroupSyncModule</module-class>
     <parameter>
       <param-name>source</param-name>
@@ -28,20 +28,20 @@
       <param-value>nsUniqueId</param-value>
     </parameter>
     <parameter>
-      <param-name>targetImportGroupMapping</param-name>
-      <param-value>IPAImportGroup</param-value>
+      <param-name>targetImportMapping</param-name>
+      <param-value>ipaImportGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>targetSyncGroupMapping</param-name>
-      <param-value>IPASyncGroup</param-value>
+      <param-name>targetSyncMapping</param-name>
+      <param-value>ipaSyncGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>targetLinkGroupMapping</param-name>
-      <param-value>IPALinkGroup</param-value>
+      <param-name>targetLinkMapping</param-name>
+      <param-value>ipaLinkGroup</param-value>
     </parameter>
     <parameter>
-      <param-name>targetUnlinkGroupMapping</param-name>
-      <param-value>IPAUnlinkGroup</param-value>
+      <param-name>targetUnlinkMapping</param-name>
+      <param-value>ipaUnlinkGroup</param-value>
     </parameter>
     <parameter>
       <param-name>target</param-name>
@@ -61,7 +61,7 @@
     </parameter>
     <parameter>
       <param-name>userSyncModule</param-name>
-      <param-value>SambaIPAUserModule</param-value>
+      <param-value>UserModule</param-value>
     </parameter>
   </module>
 

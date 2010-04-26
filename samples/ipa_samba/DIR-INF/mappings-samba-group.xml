@@ -5,7 +5,7 @@
 
 <mappings>
 
-  <mapping name="SambaImportGroup">
+  <mapping name="sambaImportGroup">
 
     <rule name="dn">
       <expression>
@@ -35,7 +35,7 @@ return module.transformSourceMembers(session, ipa.member);
 
   </mapping>
 
-  <mapping name="SambaSyncGroup">
+  <mapping name="sambaSyncGroup">
 
     <rule name="cn">
       <variable>ipa.cn</variable>
@@ -52,11 +52,11 @@ return module.transformSourceMembers(session, ipa.member);
 
   </mapping>
 
-  <mapping name="SambaLinkGroup">
+  <mapping name="sambaLinkGroup">
 
   </mapping>
 
-  <mapping name="SambaUnlinkGroup">
+  <mapping name="sambaUnlinkGroup">
 
   </mapping>
 

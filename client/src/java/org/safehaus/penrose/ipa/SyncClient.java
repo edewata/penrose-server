@@ -1,12 +1,10 @@
-package org.safehaus.penrose.samba;
+package org.safehaus.penrose.ipa;
 
 import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 import org.apache.log4j.*;
 import org.apache.log4j.xml.DOMConfigurator;
 import org.safehaus.penrose.client.PenroseClient;
-import org.safehaus.penrose.ipa.ChangeLogMonitorClient;
-import org.safehaus.penrose.ipa.SyncModuleClient;
 import org.safehaus.penrose.ldap.Attributes;
 import org.safehaus.penrose.ldap.DN;
 import org.safehaus.penrose.module.ModuleClient;
@@ -24,7 +22,7 @@ import java.util.Map;
 /**
  * @author Endi Sukma Dewata
  */
-public class SambaSyncClient {
+public class SyncClient {
 
     PenroseClient client;
 
@@ -34,8 +32,9 @@ public class SambaSyncClient {
     ChangeLogMonitorClient changeLogMonitorClient;
     SyncModuleClient userSyncModuleClient;
     SyncModuleClient groupSyncModuleClient;
+    SyncModuleClient hostSyncModuleClient;
 
-    public SambaSyncClient(
+    public SyncClient(
             String serverType,
             String protocol,
             String hostname,
@@ -75,6 +74,9 @@ public class SambaSyncClient {
 
         ModuleClient groupSyncModuleClient = moduleManagerClient.getModuleClient("GroupModule");
         this.groupSyncModuleClient = new SyncModuleClient(groupSyncModuleClient);
+
+        ModuleClient hostSyncModuleClient = moduleManagerClient.getModuleClient("HostModule");
+        this.hostSyncModuleClient = new SyncModuleClient(hostSyncModuleClient);
     }
 
     public void close() throws Exception {
@@ -168,14 +170,13 @@ public class SambaSyncClient {
             String key = iterator.next();
             deleteGroup(key);
 
+        } else if ("sync-hosts".equals(command)) {
+            syncHosts();
+
         } else {
             throw new Exception("Unknown command: "+command);
         }
     }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Change Log Monitor
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public void start() throws Exception {
         changeLogMonitorClient.start();
@@ -206,7 +207,7 @@ public class SambaSyncClient {
             Object changeNumber = attributes.getValue("changeNumber");
             Object changeType = attributes.getValue("changeType");
             Object targetDn = attributes.getValue("targetDn");
-            
+
             System.out.println(" - "+changeNumber+": "+changeType+" "+targetDn);
         }
     }
@@ -218,7 +219,7 @@ public class SambaSyncClient {
     }
 
     public void showUsers() throws Exception {
-        Map<String,DN> map = userSyncModuleClient.getDns();
+        Map<String, DN> map = userSyncModuleClient.getDns();
 
         System.out.println("Users:");
         for (String key : map.keySet()) {
@@ -229,7 +230,7 @@ public class SambaSyncClient {
 
     public void showUser(String key) throws Exception {
         SearchResult result = userSyncModuleClient.getEntry(key);
-        
+
         System.out.println(result);
     }
 
@@ -255,6 +256,7 @@ public class SambaSyncClient {
     public void syncAll() throws Exception {
         syncUsers();
         syncGroups();
+        syncHosts();
     }
 
     public void syncUsers() throws Exception {
@@ -297,8 +299,15 @@ public class SambaSyncClient {
         groupSyncModuleClient.deleteEntry(key);
     }
 
+    public void syncHosts() throws Exception {
+        ModuleManagerClient moduleManagerClient = partitionClient.getModuleManagerClient();
+        ModuleClient moduleClient = moduleManagerClient.getModuleClient("HostModule");
+
+        moduleClient.invoke("syncHosts");
+    }
+
     public static void showUsage() {
-        System.out.println("Usage: org.safehaus.penrose.samba.SambaSyncClient [OPTION]... <command> [arguments]...");
+        System.out.println("Usage: "+ SyncClient.class.getName()+" [OPTION]... <command> [arguments]...");
         System.out.println();
         System.out.println("Options:");
         System.out.println("  -?, --help         display this help and exit");
@@ -312,14 +321,14 @@ public class SambaSyncClient {
         System.out.println();
         System.out.println("Commands:");
         System.out.println("  sync                Sync all.");
-        System.out.println("  sync-users          Sync users.");
+        System.out.println("  sync-users          Sync all users.");
         System.out.println("  sync-user <key>     Sync user.");
         System.out.println("  show-users          Show users.");
         System.out.println("  show-user <key>     Show user.");
         System.out.println("  link-user <key>     Link user.");
         System.out.println("  unlink-user <key>   Unlink user.");
         System.out.println("  delete-user <key>   Delete user.");
-        System.out.println("  sync-groups         Sync groups.");
+        System.out.println("  sync-groups         Sync all groups.");
         System.out.println("  sync-group <key>    Sync group.");
         System.out.println("  show-groups         Show groups.");
         System.out.println("  show-group <key>    Show group.");
@@ -345,7 +354,7 @@ public class SambaSyncClient {
         LongOpt[] longopts = new LongOpt[1];
         longopts[0] = new LongOpt("help", LongOpt.NO_ARGUMENT, null, '?');
 
-        Getopt getopt = new Getopt("SambaSyncClient", args, "-:?dvt:h:p:r:P:D:w:", longopts);
+        Getopt getopt = new Getopt(SyncClient.class.getName(), args, "-:?dvt:h:p:r:P:D:w:", longopts);
 
         Collection<String> parameters = new ArrayList<String>();
         int c;
@@ -419,7 +428,7 @@ public class SambaSyncClient {
         }
 
         try {
-            SambaSyncClient client = new SambaSyncClient(
+            SyncClient client = new SyncClient(
                     serverType,
                     protocol,
                     hostname,
@@ -431,7 +440,9 @@ public class SambaSyncClient {
             );
 
             client.connect();
+
             client.execute(parameters);
+
             client.close();
 
         } catch (Exception e) {

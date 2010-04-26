@@ -8,42 +8,6 @@
   <module name="ChangeLogMonitorModule">
     <module-class>org.safehaus.penrose.ipa.module.ChangeLogMonitorModule</module-class>
     <parameter>
-      <param-name>source</param-name>
-      <param-value>ipa</param-value>
-    </parameter>
-    <parameter>
-      <param-name>sourceUsers</param-name>
-      <param-value>ipa_users</param-value>
-    </parameter>
-    <parameter>
-      <param-name>sourceGroups</param-name>
-      <param-value>ipa_groups</param-value>
-    </parameter>
-    <parameter>
-      <param-name>sourceHosts</param-name>
-      <param-value>ipa_hosts</param-value>
-    </parameter>
-    <parameter>
-      <param-name>target</param-name>
-      <param-value>sambaBE</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetWrite</param-name>
-      <param-value>sambaFE</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetUsers</param-name>
-      <param-value>sambaUsersBE</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetGroups</param-name>
-      <param-value>sambaGroupsBE</param-value>
-    </parameter>
-    <parameter>
-      <param-name>targetHosts</param-name>
-      <param-value>sambaHosts</param-value>
-    </parameter>
-    <parameter>
       <param-name>changelog</param-name>
       <param-value>ipa_changelog</param-value>
     </parameter>
@@ -52,12 +16,16 @@
       <param-value>ipa_tracker</param-value>
     </parameter>
     <parameter>
-      <param-name>userSyncModule</param-name>
-      <param-value>IPASambaUserModule</param-value>
+      <param-name>modules.count</param-name>
+      <param-value>2</param-value>
     </parameter>
     <parameter>
-      <param-name>groupSyncModule</param-name>
-      <param-value>IPASambaGroupModule</param-value>
+      <param-name>modules.1</param-name>
+      <param-value>(targetObjectClass=inetUser):UserModule</param-value>
+    </parameter>
+    <parameter>
+      <param-name>modules.2</param-name>
+      <param-value>(targetObjectClass=ipaUserGroup):GroupModule</param-value>
     </parameter>
   </module>
 
